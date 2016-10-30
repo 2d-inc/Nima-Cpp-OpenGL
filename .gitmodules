@@ -1,0 +1,3 @@
+[submodule "Nima-Cpp"]
+	path = Nima-Cpp
+	url = https://github.com/2d-inc/Nima-Cpp
