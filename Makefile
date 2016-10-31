@@ -19,6 +19,7 @@ clean:
 
 dirs:
 	mkdir -p $(OBJ_DIR)
+	cd Nima-Math-Cpp && make
 	cd Nima-Cpp && make
 
 # Build sources
