@@ -7,20 +7,20 @@ BUILD_DIR 		= Build
 OBJ_DIR			= $(BUILD_DIR)/obj
 CPP_SOURCES		= Main.cpp
 CPP_OBJECTS		= $(CPP_SOURCES:%.cpp=$(OBJ_DIR)/%.o)
-CPP_INCLUDES	= -I/usr/local/include -INima-Cpp/Build/include 
-LFLAGS			= -Wl,-rpath,./ -L/usr/local/lib -LNima-Cpp/Build/lib
-LIBS			= -lnima -lglfw3 -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo
+CPP_INCLUDES	= -INima-Cpp/Build/include -INima-Cpp/Nima-Math-Cpp/Build/include -I/usr/local/include 
+LFLAGS			= -Wl,-rpath,./ -LNima-Cpp/Build/lib -LNima-Cpp/Nima-Math-Cpp/Build/lib -L/usr/local/lib
+LIBS			= -lnima -lnima-math -lglfw3 -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo
 
 # Default target
 all: dirs $(OUTPUTFILE)
 
 clean:
-	$(RM) -fR $(OBJ_DIR)/Main.o
+	@$(RM) -fR $(OBJ_DIR)/Main.o
+	@cd Nima-Cpp && make clean
 
 dirs:
 	mkdir -p $(OBJ_DIR)
-	cd Nima-Math-Cpp && make
-	cd Nima-Cpp && make
+	@cd Nima-Cpp && make
 
 # Build sources
 $(OUTPUTFILE): $(CPP_OBJECTS)
