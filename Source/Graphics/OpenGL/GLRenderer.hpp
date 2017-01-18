@@ -12,13 +12,20 @@ namespace nima
 	class GLShader;
 	class GLShaderProgram;
 	class GLShaderAttribute;
+	class GLVertexBuffer;
+	class GraphicsBuffer;
 
 	class GLRenderer
 	{
 		private:
 			GLShaderResources m_Shaders;
-			
+			const GLShaderProgram* m_BoundShader;
+			const GLVertexBuffer* m_BoundVertexBuffer;
+
 		protected:
+			GLRenderer();
+			bool bind(const GLShaderProgram* program, const GLVertexBuffer* vertexBuffer);
+
 	};
 }
 

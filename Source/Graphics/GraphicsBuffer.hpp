@@ -13,7 +13,7 @@ namespace nima
 	class GraphicsBuffer
 	{
 		public:
-			virtual ~GraphicsBuffer();
+			virtual ~GraphicsBuffer() {};
 			virtual void setData(void* data, int size, BufferHint hint) = 0;
 	};
 }

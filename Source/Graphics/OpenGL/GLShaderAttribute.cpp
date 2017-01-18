@@ -64,6 +64,11 @@ unsigned int GLShaderAttribute::stride() const
 	return m_Stride;
 }
 
+unsigned int GLShaderAttribute::strideInBytes() const
+{
+	return m_StrideInBytes;
+}
+
 unsigned int GLShaderAttribute::offset() const
 {
 	return m_Offset;

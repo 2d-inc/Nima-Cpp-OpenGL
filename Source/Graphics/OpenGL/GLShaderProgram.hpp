@@ -31,8 +31,8 @@ namespace nima
 
 
 			bool load(GLShaderResources& shaderResources, const std::string& vsFilename, const std::string& fsFilename, std::vector<GLShaderAttribute> attributes, std::vector<GLShaderUniform> uniforms);
-			void bind();
-			void unbind();
+			void bind() const;
+			void unbind() const;
 
 			int uniform(int idx) const { return m_Uniforms[idx]; }
 	};

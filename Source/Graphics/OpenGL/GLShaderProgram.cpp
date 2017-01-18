@@ -53,54 +53,75 @@ bool GLShaderProgram::load(GLShaderResources& shaderResources, const std::string
 	unload();
 
 	m_FragmentShader = shaderResources.get(fsFilename);
-    m_VertexShader = shaderResources.get(vsFilename);
-    
-    if(m_FragmentShader == nullptr || m_VertexShader == nullptr)
-    {
-        return false;
-    }
-    
-    m_Id = glCreateProgram();
-    glAttachShader(m_Id, m_VertexShader->id());
-    glAttachShader(m_Id, m_FragmentShader->id());
-    glLinkProgram(m_Id);
-    glUseProgram(m_Id);
+	m_VertexShader = shaderResources.get(vsFilename);
 
-    m_Attributes = new GLShaderAttribute[attributes.size()];
-    int idx = 0;
-    for(auto a : attributes)
-    {
-        int location = glGetAttribLocation(m_Id, a.name().c_str());
-        if(location == -1)
-        {
-            printf("ShaderProgram::load - couln't find attribute %s (%s | %s).\n", a.name().c_str(), vsFilename.c_str(), fsFilename.c_str());
-        }
-        a.position(location);
-        m_Attributes[idx++] = a;
-    }
+	if (m_FragmentShader == nullptr || m_VertexShader == nullptr)
+	{
+		return false;
+	}
 
-    idx = 0;
-    m_Uniforms = new int[uniforms.size()];
-    for(auto u : uniforms)
-    {
-        int l = glGetUniformLocation(m_Id, u.c_str());
-        if(l == -1)
-        {
-            printf("ShaderProgram::load - couln't find uniform %s (%s | %s).\n", u.c_str(), vsFilename.c_str(), fsFilename.c_str());
-        }
-        m_Uniforms[idx++] = l;
-    }
+	m_Id = glCreateProgram();
+	glAttachShader(m_Id, m_VertexShader->id());
+	glAttachShader(m_Id, m_FragmentShader->id());
+	glLinkProgram(m_Id);
+	glUseProgram(m_Id);
+
+	m_AttributeCount = attributes.size();
+	m_Attributes = new GLShaderAttribute[m_AttributeCount];
+	int idx = 0;
+	for (auto a : attributes)
+	{
+		int location = glGetAttribLocation(m_Id, a.name().c_str());
+		if (location == -1)
+		{
+			printf("ShaderProgram::load - couln't find attribute %s (%s | %s).\n", a.name().c_str(), vsFilename.c_str(), fsFilename.c_str());
+		}
+		a.position(location);
+		m_Attributes[idx++] = a;
+	}
+
+	idx = 0;
+	m_UniformCount = uniforms.size();
+	m_Uniforms = new int[m_UniformCount];
+
+	for (auto u : uniforms)
+	{
+		int l = glGetUniformLocation(m_Id, u.c_str());
+		if (l == -1)
+		{
+			printf("ShaderProgram::load - couln't find uniform %s (%s | %s).\n", u.c_str(), vsFilename.c_str(), fsFilename.c_str());
+		}
+		m_Uniforms[idx++] = l;
+	}
 
 
 	return true;
 }
 
-void GLShaderProgram::bind()
+void GLShaderProgram::bind() const
 {
-
+	glUseProgram(m_Id);
+	for(int i = 0; i < m_AttributeCount; i++)
+	{
+		const GLShaderAttribute& attribute = m_Attributes[i];
+		if(attribute.position() == -1)
+		{
+			continue;
+		}
+		glEnableVertexAttribArray(attribute.position());
+		glVertexAttribPointer(attribute.position(), attribute.size(), GL_FLOAT, GL_FALSE, attribute.strideInBytes(), attribute.bufferPosition());
+	}
 }
 
-void GLShaderProgram::unbind()
+void GLShaderProgram::unbind() const
 {
-
+	for(int i = 0; i < m_AttributeCount; i++)
+	{
+		const GLShaderAttribute& attribute = m_Attributes[i];
+		if(attribute.position() == -1)
+		{
+			continue;
+		}
+		glDisableVertexAttribArray(attribute.position());
+	}
 }
