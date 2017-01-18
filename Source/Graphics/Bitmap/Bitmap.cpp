@@ -28,7 +28,7 @@ void Bitmap::load(const std::string& filename, bool flipY)
 		throw new UnknownBitmapFormatException("Bitmap filename has no extension.", filename);
 	}
 
-	
+
 	std::string extension(filename, index);
 	std::transform(extension.begin(), extension.end(), extension.begin(), std::tolower);
 	if (extension == ".png")

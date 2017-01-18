@@ -3,20 +3,20 @@
 #include <nima/Actor.hpp>
 #include <nima/Exceptions/OverflowException.hpp>
 #include <nima/Animation/Interpolators/CubicSolver.hpp>
-#include "Bitmap/Bitmap.hpp"
+#include "Graphics/Bitmap/Bitmap.hpp"
 
 void error_callback(int error, const char* description)
 {
-    puts(description);
+	puts(description);
 }
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-    {
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-        return;
-    }
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+	{
+		glfwSetWindowShouldClose(window, GLFW_TRUE);
+		return;
+	}
 }
 
 void character_callback(GLFWwindow* window, unsigned int codepoint)
@@ -37,11 +37,11 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 
 int main(int argc, char** argv)
 {
-	if(!glfwInit())
+	if (!glfwInit())
 	{
 		return 0;
 	}
-	
+
 	nima::Bitmap* bmp = new nima::Bitmap();
 	bmp->loadFromPNG("Assets/Archer.png", true);
 
@@ -55,24 +55,24 @@ int main(int argc, char** argv)
 		printf("VAL %i %f %f %f\n",i, _x, solver.get(_x), (expected[i] - solver.get(_x)));
 	}*/
 
-    try
-    {
-        nima::Actor* actor = nima::Actor::fromFile("Assets/Archer.nima");
-        delete actor;
-    }
-    catch(nima::OverflowException ex)
-    {
-        printf("GOT EX\n");
-    }
-    return 0;
+	try
+	{
+		nima::Actor* actor = nima::Actor::fromFile("Assets/Archer.nima");
+		delete actor;
+	}
+	catch (nima::OverflowException ex)
+	{
+		printf("GOT EX\n");
+	}
+	return 0;
 
 	glfwSetErrorCallback(error_callback);
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-    int initialWindowWidth = 640;
-    int initialWindowHeight = 480;
+	int initialWindowWidth = 640;
+	int initialWindowHeight = 480;
 
 	GLFWwindow* window = glfwCreateWindow(initialWindowWidth, initialWindowHeight, "Nima", NULL, NULL);
 	if (!window)
@@ -83,33 +83,33 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetCursorPosCallback(window, cursor_position_callback);
-    glfwSetMouseButtonCallback(window, mouse_button_callback);
-    glfwSetScrollCallback(window, scroll_callback);
-    glfwSetCharCallback(window, character_callback);
+	glfwSetKeyCallback(window, key_callback);
+	glfwSetCursorPosCallback(window, cursor_position_callback);
+	glfwSetMouseButtonCallback(window, mouse_button_callback);
+	glfwSetScrollCallback(window, scroll_callback);
+	glfwSetCharCallback(window, character_callback);
 
 	glfwMakeContextCurrent(window);
 
 	// Enable VSYNC.
 	glfwSwapInterval(1);
 
-    int width = initialWindowWidth, height = initialWindowHeight;
-    int lastWidth = width, lastHeight = height;
+	int width = initialWindowWidth, height = initialWindowHeight;
+	int lastWidth = width, lastHeight = height;
 	while (!glfwWindowShouldClose(window))
 	{
 		glfwGetFramebufferSize(window, &width, &height);
-		if(width != lastWidth || height != lastHeight)
+		if (width != lastWidth || height != lastHeight)
 		{
 			lastWidth = width;
 			lastHeight = height;
-            // resized.
+			// resized.
 		}
 		glViewport(0, 0, width, height);
 		glClearColor(0.3f, 0.3f, 0.3f, 0.0f);
 
 		glClear(GL_COLOR_BUFFER_BIT);
-		
+
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
