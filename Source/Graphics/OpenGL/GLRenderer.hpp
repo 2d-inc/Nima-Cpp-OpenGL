@@ -4,7 +4,6 @@
 #include <nima/Mat2D.hpp>
 #include <nima/Vec2D.hpp>
 #include <nima/Color.hpp>
-#include "../Renderer2D.hpp"
 #include "GLShaderResources.hpp"
 
 namespace nima

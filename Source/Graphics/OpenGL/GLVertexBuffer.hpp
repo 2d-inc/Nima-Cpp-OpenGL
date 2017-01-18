@@ -13,7 +13,7 @@ namespace nima
 
 		public:
 			GLVertexBuffer();
-			virtual ~GLVertexBuffer();
+			~GLVertexBuffer();
 			virtual void setData(void* data, int size, BufferHint hint) override;
 
 			void bind() const;
