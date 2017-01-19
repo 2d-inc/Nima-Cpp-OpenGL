@@ -23,10 +23,12 @@ namespace nima
 			~GameActorImage();
 
 			ActorNode* makeInstance(Actor* resetActor);
+			void render(GameActorInstance* gameActorInstance, Renderer2D* renderer);
 	};
 
 	class GameActor : public Actor
 	{
+		friend class GameActorImage;
 		typedef Actor Base;
 		private:
 			Texture** m_Textures;
@@ -48,11 +50,16 @@ namespace nima
 	{
 		friend class GameActor;
 		private:
-			GameActorInstance();
+			GameActorInstance(GameActor* gameActor);
+			GameActor* m_GameActor;
+
 		public:
 			~GameActorInstance();
 			void initialize(Renderer2D* renderer);
 			void render(Renderer2D* renderer);
+			GameActor* gameActor();
+		protected:
+			void updateVertexDeform(ActorImage* image) override;
 	};
 }
 

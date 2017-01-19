@@ -23,6 +23,7 @@ namespace nima
 
 		protected:
 			GLRenderer();
+			void unbind();
 			bool bind(const GLShaderProgram* program, const GLVertexBuffer* vertexBuffer);
 			inline bool bind(const GLShaderProgram* program, const GraphicsBuffer* vertexBuffer) { return bind(program, reinterpret_cast<const GLVertexBuffer*>(vertexBuffer)); }
 

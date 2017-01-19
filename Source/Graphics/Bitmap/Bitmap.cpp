@@ -3,6 +3,7 @@
 #include "UnknownBitmapFormatException.hpp"
 #include <png.h>
 #include <cstdio>
+#include <nima/Exceptions/MissingFileException.hpp>
 
 using namespace nima;
 
@@ -25,7 +26,7 @@ void Bitmap::load(const std::string& filename, bool flipY)
 	size_t index = filename.rfind('.');
 	if (index == std::string::npos)
 	{
-		throw new UnknownBitmapFormatException("Bitmap filename has no extension.", filename);
+		throw UnknownBitmapFormatException("Bitmap filename has no extension.", filename);
 	}
 
 
@@ -39,7 +40,7 @@ void Bitmap::load(const std::string& filename, bool flipY)
 	else
 	{
 		// Could add jpg, pvrtc, etc.
-		throw new UnknownBitmapFormatException("Bitmap format not supported.", filename);
+		throw UnknownBitmapFormatException("Bitmap format not supported.", filename);
 	}
 }
 
@@ -54,26 +55,30 @@ void Bitmap::loadFromPNG(const std::string& filename, bool flipY)
 
 	if ( png_ptr == nullptr )
 	{
-		throw new DecodeBitmapException("libpng failed (png_create_read_struct)", filename);
+		throw DecodeBitmapException("libpng failed (png_create_read_struct)", filename);
 	}
 
 	info_ptr = png_create_info_struct( png_ptr );
 	if ( info_ptr == nullptr )
 	{
 		png_destroy_read_struct( &png_ptr, (png_infopp)nullptr, (png_infopp)nullptr );
-		throw new DecodeBitmapException("libpng failed (png_create_info_struct)", filename);
+		throw DecodeBitmapException("libpng failed (png_create_info_struct)", filename);
 	}
 //#if ANDROID
 	if ( setjmp( png_jmpbuf(png_ptr ) ) )
 	{
 		png_destroy_read_struct( &png_ptr, &info_ptr, (png_infopp)nullptr );
-		throw new DecodeBitmapException("not a valid png file", filename);
+		throw DecodeBitmapException("not a valid png file", filename);
 		//LOGI( "Bitmap::LoadPNG - \"%s\" is not a valid png file.", filename == nullptr ? "???" : filename );
 		//return false;
 	}
 //#endif
 	//std::string resourcePath = Platform::resourcePath(filename);
 	std::FILE* fp = std::fopen(filename.c_str(), "rb");
+	if(fp == nullptr)
+	{
+		throw MissingFileException("file is missing during png read", filename);
+	}
 
 	png_init_io( png_ptr, fp );
 	png_read_info( png_ptr, info_ptr );
@@ -125,7 +130,7 @@ void Bitmap::loadFromPNG(const std::string& filename, bool flipY)
 	if ( setjmp( png_jmpbuf(png_ptr) ) )
 	{
 		png_destroy_read_struct( &png_ptr, &info_ptr, (png_infopp)nullptr );
-		throw new DecodeBitmapException("not a valid png file during read", filename);
+		throw DecodeBitmapException("not a valid png file during read", filename);
 	}
 
 	if ( row_stride != width * m_NumChannels )

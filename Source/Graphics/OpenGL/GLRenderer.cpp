@@ -11,6 +11,16 @@ GLRenderer::GLRenderer() :
 
 }
 
+void GLRenderer::unbind()
+{
+	m_BoundVertexBuffer = nullptr;
+	if(m_BoundShader != nullptr)
+	{
+		m_BoundShader->unbind();
+	}
+	m_BoundShader = nullptr;
+}
+
 bool GLRenderer::bind(const GLShaderProgram* program, const GLVertexBuffer* vertexBuffer)
 {
 	if(m_BoundShader == program && m_BoundVertexBuffer == vertexBuffer)
@@ -53,7 +63,10 @@ bool GLRenderer::bind(const GLShaderProgram* program, const GLVertexBuffer* vert
 		m_BoundShader = program;
 	}
 
-	program->bind(vertexBuffer, secondaryVertexBuffer);
+	if(program != nullptr)
+	{
+		program->bind(vertexBuffer, secondaryVertexBuffer);
+	}
 
 	return true;
 }

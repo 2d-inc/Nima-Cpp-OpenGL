@@ -1,6 +1,9 @@
 #include "GameActor.hpp"
 #include "Graphics/GraphicsBuffer.hpp"
 #include "Graphics/Texture.hpp"
+#include "Graphics/Bitmap/DecodeBitmapException.hpp"
+#include "Graphics/Bitmap/UnknownBitmapFormatException.hpp"
+#include <nima/Exceptions/MissingFileException.hpp>
 #include <cassert>
 
 using namespace nima;
@@ -22,6 +25,38 @@ ActorNode* GameActorImage::makeInstance(Actor* resetActor)
 	ActorImage* instanceNode = new GameActorImage();
 	instanceNode->copy(this, resetActor);
 	return instanceNode;
+}
+
+static Color WhiteColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+void GameActorImage::render(GameActorInstance* gameActorInstance, Renderer2D* renderer)
+{
+	if(textureIndex() < 0)
+	{
+		return;
+	}
+	renderer->setBlendMode(blendMode());
+
+	Texture* texture = gameActorInstance->gameActor()->m_Textures[textureIndex()];
+	GraphicsBuffer* vertexBuffer = gameActorInstance->gameActor()->m_VertexBuffer;
+	//GraphicsBuffer* skinnedVertexBuffer = gameActorInstance->gameActor()->m_SkinnedVertexBuffer;
+	GraphicsBuffer* indexBuffer = gameActorInstance->gameActor()->m_IndexBuffer;
+
+	if(connectedBoneCount() > 0)
+	{
+
+	}
+	else
+	{
+		if(m_DeformVertexBuffer != nullptr)
+		{
+			//renderer->drawTexturedAndDeformed(worldTransform(), m_DeformVertexBuffer, vertexBuffer, indexBuffer, m_IndexOffset, triangleCount()*3, renderOpacity(), WhiteColor, texture);
+		}
+		else
+		{
+			renderer->drawTextured(worldTransform(), vertexBuffer, indexBuffer, m_IndexOffset, triangleCount()*3, renderOpacity(), WhiteColor, texture);
+		}
+	}
 }
 
 GameActor::GameActor() :
@@ -76,13 +111,16 @@ ActorImage* GameActor::makeImageNode()
 
 void GameActor::initialize(Renderer2D* renderer)
 {
-	if(m_MaxTextureIndex != 0)
+	printf("INIT\n");
+	if(textureCount() != 0)
 	{
+		printf("HERE %i\n", m_MaxTextureIndex+1);
 		m_Textures = new Texture*[m_MaxTextureIndex+1];	
 		for(int i = 0; i <= m_MaxTextureIndex; i++)
 		{
+			printf("ONE %s\n", baseFilename().c_str());
 			std::string atlasFilename;
-			if(m_MaxTextureIndex == 1)
+			if(m_MaxTextureIndex == 0)
 			{
 				atlasFilename = baseFilename() + std::string(".png");
 			}
@@ -92,7 +130,22 @@ void GameActor::initialize(Renderer2D* renderer)
 			}
 
 			printf("FILENAME %s\n", atlasFilename.c_str());
-			m_Textures[i] = renderer->makeTexture(atlasFilename, Texture::MipMap | Texture::ClampToEdge);
+			try
+			{
+				m_Textures[i] = renderer->makeTexture(atlasFilename, Texture::MipMap | Texture::ClampToEdge);
+			}
+			catch(const DecodeBitmapException& ex)
+			{
+				printf("Decode bitmap error: %s\n", ex.message().c_str());
+			}
+			catch(const UnknownBitmapFormatException& ex)
+			{
+				printf("Unknown format error: %s\n", ex.message().c_str());	
+			}
+			catch(const MissingFileException& ex)
+			{
+				printf("Missing file error: %s %s\n", ex.message().c_str(), ex.filename().c_str());	
+			}
 		}
 	}	
 
@@ -150,12 +203,13 @@ void GameActor::initialize(Renderer2D* renderer)
 
 GameActorInstance* GameActor::makeInstance()
 {
-	GameActorInstance* instance = new GameActorInstance();
+	GameActorInstance* instance = new GameActorInstance(this);
 	instance->copy(*this);
 	return instance;
 }
 
-GameActorInstance::GameActorInstance()
+GameActorInstance::GameActorInstance(GameActor* gameActor) :
+	m_GameActor(gameActor)
 {
 
 }
@@ -183,7 +237,25 @@ void GameActorInstance::initialize(Renderer2D* renderer)
 	}
 }
 
+GameActor* GameActorInstance::gameActor()
+{
+	return m_GameActor;
+}
+
+void GameActorInstance::updateVertexDeform(ActorImage* image)
+{
+	GameActorImage* actorImage = reinterpret_cast<GameActorImage*>(image);
+	actorImage->m_DeformVertexBuffer->setData(actorImage->animationDeformedVertices(), sizeof(float) * actorImage->vertexCount() * 2, BufferHint::Dynamic);	
+}
+
 void GameActorInstance::render(Renderer2D* renderer)
 {
-	
+	for(int i = 0; i < m_ImageNodeCount; i++)
+	{
+		GameActorImage* actorImage = reinterpret_cast<GameActorImage*>(m_ImageNodes[i]);
+		if(actorImage != nullptr)
+		{
+			actorImage->render(this, renderer);
+		}
+	}
 }

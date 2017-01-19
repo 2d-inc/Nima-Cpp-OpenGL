@@ -20,7 +20,8 @@ GLRenderer2D::GLRenderer2D() :
 {
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glDisable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
+	glDisable(GL_CULL_FACE);
 	glFrontFace(GL_CW);
 	glDisable(GL_BLEND);
 
@@ -67,9 +68,8 @@ void GLRenderer2D::setBlendMode(BlendMode mode)
 	{
 		case BlendMode::Off:
 			glDisable(GL_BLEND);
-
 			break;
-		case BlendMode::Transparent:
+		case BlendMode::Normal:
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 			break;
@@ -119,7 +119,7 @@ void GLRenderer2D::setViewportSize(int width, int height)
 	}
 	m_ViewportWidth = width;
 	m_ViewportHeight = height;
-
+	printf("VP %i %i\n", width, height);
 	glViewport(0, 0, (float)(m_ViewportWidth), (float)(m_ViewportHeight));
 	ortho(m_ProjectionMatrix, 0.0f, (float)m_ViewportWidth, 0.0f, (float)m_ViewportHeight, 0.0f, 100.0f);
 }
@@ -127,9 +127,10 @@ void GLRenderer2D::setViewportSize(int width, int height)
 void GLRenderer2D::clear()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
+	unbind();
 }
 
-void GLRenderer2D::drawTextured(const Mat2D& view, const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture)
+void GLRenderer2D::setView(const Mat2D& view)
 {
 	m_ViewMatrix[0] = view[0];
 	m_ViewMatrix[1] = view[1];
@@ -137,7 +138,10 @@ void GLRenderer2D::drawTextured(const Mat2D& view, const Mat2D& transform, const
 	m_ViewMatrix[5] = view[3];
 	m_ViewMatrix[12] = view[4];
 	m_ViewMatrix[13] = view[5];
+}
 
+void GLRenderer2D::drawTextured(const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture)
+{
 	m_TransformMatrix[0] = transform[0];
 	m_TransformMatrix[1] = transform[1];
 	m_TransformMatrix[4] = transform[2];
@@ -149,13 +153,15 @@ void GLRenderer2D::drawTextured(const Mat2D& view, const Mat2D& transform, const
 	{
 		// This value never changes.
 		glUniform1i(m_TexturedShader.uniform(3), 0);
+
+		// View and projection transform shouldn't change between re-bind calls.
+		glUniformMatrix4fv(m_TexturedShader.uniform(0), 1, GL_FALSE, m_ProjectionMatrix);
+		glUniformMatrix4fv(m_TexturedShader.uniform(1), 1, GL_FALSE, m_ViewMatrix);
 	}
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, reinterpret_cast<const GLTexture*>(texture)->id());
 
-	glUniformMatrix4fv(m_TexturedShader.uniform(0), 1, GL_FALSE, m_ProjectionMatrix);
-	glUniformMatrix4fv(m_TexturedShader.uniform(1), 1, GL_FALSE, m_ViewMatrix);
 	glUniformMatrix4fv(m_TexturedShader.uniform(2), 1, GL_FALSE, m_TransformMatrix);
 	glUniform1f(m_TexturedShader.uniform(4), opacity);
 	glUniform4fv(m_TexturedShader.uniform(5), 1, color.values());
@@ -181,15 +187,8 @@ void GLRenderer2D::drawTextured(const Mat2D& view, const Mat2D& transform, const
 	GL.DrawElements(BeginMode.Triangles, indexBuffer.Size, DrawElementsType.UnsignedShort, 0);*/
 }
 
-void GLRenderer2D::drawTexturedAndDeformed(const Mat2D& view, const Mat2D& transform, const GraphicsBuffer* deformBuffer, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture)
+void GLRenderer2D::drawTexturedAndDeformed(const Mat2D& transform, const GraphicsBuffer* deformBuffer, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture)
 {
-	m_ViewMatrix[0] = view[0];
-	m_ViewMatrix[1] = view[1];
-	m_ViewMatrix[4] = view[2];
-	m_ViewMatrix[5] = view[3];
-	m_ViewMatrix[12] = view[4];
-	m_ViewMatrix[13] = view[5];
-
 	m_TransformMatrix[0] = transform[0];
 	m_TransformMatrix[1] = transform[1];
 	m_TransformMatrix[4] = transform[2];
@@ -201,14 +200,14 @@ void GLRenderer2D::drawTexturedAndDeformed(const Mat2D& view, const Mat2D& trans
 	{
 		// This value never changes.
 		glUniform1i(m_TexturedShader.uniform(3), 0);
+		glUniformMatrix4fv(m_TexturedShader.uniform(1), 1, GL_FALSE, m_ViewMatrix);
+		glUniformMatrix4fv(m_TexturedShader.uniform(2), 1, GL_FALSE, m_TransformMatrix);
 	}
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, reinterpret_cast<const GLTexture*>(texture)->id());
 
 	glUniformMatrix4fv(m_TexturedShader.uniform(0), 1, GL_FALSE, m_ProjectionMatrix);
-	glUniformMatrix4fv(m_TexturedShader.uniform(1), 1, GL_FALSE, m_ViewMatrix);
-	glUniformMatrix4fv(m_TexturedShader.uniform(2), 1, GL_FALSE, m_TransformMatrix);
 	glUniform1f(m_TexturedShader.uniform(4), opacity);
 	glUniform4fv(m_TexturedShader.uniform(5), 1, color.values());
 
