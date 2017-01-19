@@ -58,19 +58,6 @@ int main(int argc, char** argv)
 		printf("VAL %i %f %f %f\n",i, _x, solver.get(_x), (expected[i] - solver.get(_x)));
 	}*/
 
-	nima::GameActor* actor = new nima::GameActor();
-	try
-	{
-		actor->load("Assets/Archer.nima");
-	}
-	catch (nima::OverflowException ex)
-	{
-		printf("Bad data, got an overflow.\n");
-	}
-	catch (nima::UnsupportedVersionException ex)
-	{
-		printf("Unsupported version. %d %d\n", ex.versionFound(), ex.versionRequired());
-	}
 	//return 0;
 
 	glfwSetErrorCallback(error_callback);
@@ -103,6 +90,26 @@ int main(int argc, char** argv)
 
 	// Init renderer.
 	nima::Renderer2D* renderer = new nima::GLRenderer2D();
+
+
+	nima::GameActor* actor = new nima::GameActor();
+	try
+	{
+		actor->load("Assets/Archer.nima");
+	}
+	catch (nima::OverflowException ex)
+	{
+		printf("Bad data, got an overflow.\n");
+	}
+	catch (nima::UnsupportedVersionException ex)
+	{
+		printf("Unsupported version. %d %d\n", ex.versionFound(), ex.versionRequired());
+	}
+	actor->initialize(renderer);
+
+	
+	nima::GameActorInstance* actorInstance = actor->makeInstance();
+	actorInstance->initialize(renderer);
 
 	int width = initialWindowWidth, height = initialWindowHeight;
 	int lastWidth = width, lastHeight = height;

@@ -37,7 +37,7 @@ GameActor::~GameActor()
 {
 	if(m_Textures != nullptr)
 	{
-		for(int i = 0; i < m_MaxTextureIndex; i++)
+		for(int i = 0; i <= m_MaxTextureIndex; i++)
 		{
 			delete m_Textures[i];
 		}
@@ -53,7 +53,7 @@ void GameActor::dispose()
 	Base::dispose();
 	if(m_Textures != nullptr)
 	{
-		for(int i = 0; i < m_MaxTextureIndex; i++)
+		for(int i = 0; i <= m_MaxTextureIndex; i++)
 		{
 			delete m_Textures[i];
 		}
@@ -76,6 +76,26 @@ ActorImage* GameActor::makeImageNode()
 
 void GameActor::initialize(Renderer2D* renderer)
 {
+	if(m_MaxTextureIndex != 0)
+	{
+		m_Textures = new Texture*[m_MaxTextureIndex+1];	
+		for(int i = 0; i <= m_MaxTextureIndex; i++)
+		{
+			std::string atlasFilename;
+			if(m_MaxTextureIndex == 1)
+			{
+				atlasFilename = baseFilename() + std::string(".png");
+			}
+			else
+			{
+				atlasFilename = baseFilename() + std::to_string(i) + std::string(".png");
+			}
+
+			printf("FILENAME %s\n", atlasFilename.c_str());
+			m_Textures[i] = renderer->makeTexture(atlasFilename, Texture::MipMap | Texture::ClampToEdge);
+		}
+	}	
+
 	// We are initializing the shared actor data. Make two vertex buffers for the two different data strides we support (12 skinned) (4 unskinned).
 	assert(m_VertexBuffer == nullptr);
 
@@ -161,4 +181,9 @@ void GameActorInstance::initialize(Renderer2D* renderer)
 			actorImage->m_DeformVertexBuffer->setData(actorImage->animationDeformedVertices(), sizeof(float) * actorImage->vertexCount() * 2 /*2 floats per deform data, the x and y translation value*/, BufferHint::Dynamic);
 		}
 	}
+}
+
+void GameActorInstance::render(Renderer2D* renderer)
+{
+	
 }

@@ -52,6 +52,7 @@ namespace nima
 		public:
 			~GameActorInstance();
 			void initialize(Renderer2D* renderer);
+			void render(Renderer2D* renderer);
 	};
 }
 

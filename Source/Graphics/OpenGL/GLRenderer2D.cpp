@@ -233,6 +233,13 @@ void GLRenderer2D::drawTexturedAndDeformed(const Mat2D& view, const Mat2D& trans
 	GL.DrawElements(BeginMode.Triangles, indexBuffer.Size, DrawElementsType.UnsignedShort, 0);*/
 }
 
+Texture* GLRenderer2D::makeTexture(const std::string& filename, int flags)
+{
+	Bitmap bmp;
+	bmp.loadFromPNG(filename, true);
+	return makeTexture(&bmp, flags);
+}
+
 Texture* GLRenderer2D::makeTexture(const Bitmap* bitmap, int flags)
 {
 	GLTexture* texture = new GLTexture();
