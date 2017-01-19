@@ -16,7 +16,7 @@ namespace nima
 
 	class GLRenderer
 	{
-		private:
+		protected:
 			GLShaderResources m_Shaders;
 			const GLShaderProgram* m_BoundShader;
 			const GLVertexBuffer* m_BoundVertexBuffer;
@@ -24,6 +24,10 @@ namespace nima
 		protected:
 			GLRenderer();
 			bool bind(const GLShaderProgram* program, const GLVertexBuffer* vertexBuffer);
+			inline bool bind(const GLShaderProgram* program, const GraphicsBuffer* vertexBuffer) { return bind(program, reinterpret_cast<const GLVertexBuffer*>(vertexBuffer)); }
+
+			bool bind(const GLShaderProgram* program, const GLVertexBuffer* vertexBuffer, const GLVertexBuffer* secondaryVertexBuffer);
+			inline bool bind(const GLShaderProgram* program, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* secondaryVertexBuffer) { return bind(program, reinterpret_cast<const GLVertexBuffer*>(vertexBuffer), reinterpret_cast<const GLVertexBuffer*>(secondaryVertexBuffer)); }
 
 	};
 }

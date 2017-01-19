@@ -19,6 +19,11 @@ namespace nima
 
 			void loadFromPNG(const std::string& filename, bool flipY = false);
 			void load(const std::string& filename, bool flipY = false);
+
+			unsigned int numChannels() const;
+			unsigned int width() const;
+			unsigned int height() const;
+			unsigned char* pixels() const;
 	};
 }
 

@@ -186,3 +186,23 @@ void Bitmap::loadFromPNG(const std::string& filename, bool flipY)
 	delete [] row_pointers;
 	std::fclose(fp);
 }
+
+unsigned int Bitmap::numChannels() const
+{
+	return m_NumChannels;
+}
+
+unsigned int Bitmap::width() const
+{
+	return m_Width;
+}
+
+unsigned int Bitmap::height() const
+{
+	return m_Height;
+}
+
+unsigned char* Bitmap::pixels() const
+{
+	return m_Pixels;
+}

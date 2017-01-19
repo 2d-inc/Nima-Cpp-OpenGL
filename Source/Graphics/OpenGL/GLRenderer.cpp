@@ -18,7 +18,6 @@ bool GLRenderer::bind(const GLShaderProgram* program, const GLVertexBuffer* vert
 		return false;
 	}
 
-	vertexBuffer->bind();
 	m_BoundVertexBuffer = vertexBuffer;
 
 	if(m_BoundShader != program)
@@ -30,7 +29,31 @@ bool GLRenderer::bind(const GLShaderProgram* program, const GLVertexBuffer* vert
 		m_BoundShader = program;
 	}
 
-	program->bind();
+	program->bind(vertexBuffer);
+
+	return true;
+}
+
+bool GLRenderer::bind(const GLShaderProgram* program, const GLVertexBuffer* vertexBuffer, const GLVertexBuffer* secondaryVertexBuffer)
+{
+	// There's an assumption made that the primary vertex buffer is never bound without the secondary, when used.
+	if(m_BoundShader == program && m_BoundVertexBuffer == vertexBuffer)
+	{
+		return false;
+	}
+
+	m_BoundVertexBuffer = vertexBuffer;
+
+	if(m_BoundShader != program)
+	{
+		if(m_BoundShader != nullptr)
+		{
+			m_BoundShader->unbind();
+		}
+		m_BoundShader = program;
+	}
+
+	program->bind(vertexBuffer, secondaryVertexBuffer);
 
 	return true;
 }

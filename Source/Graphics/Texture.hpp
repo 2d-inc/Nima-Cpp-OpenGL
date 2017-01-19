@@ -12,6 +12,7 @@ namespace nima
 				MipMap = 1 << 0,
 				ClampToEdge = 1 << 1
 			};
+			
 			virtual ~Texture(){}
 	};
 }

@@ -27,7 +27,7 @@ namespace nima
 			virtual void setBlendMode(BlendMode mode) = 0;
 			virtual void setViewportSize(int width, int height) = 0;
 			virtual void clear() = 0;
-			virtual void drawTextured(const Mat2D& view, const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, float opacity, const Color& color, const Texture* texture) = 0;
+			virtual void drawTextured(const Mat2D& view, const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture) = 0;
 
 			virtual Texture* makeTexture(const Bitmap* bitmap, int flags) = 0;
 			virtual GraphicsBuffer* makeVertexBuffer() = 0;

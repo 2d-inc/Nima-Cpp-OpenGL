@@ -3,6 +3,7 @@
 
 #include "../Renderer2D.hpp"
 #include "GLRenderer.hpp"
+#include "GLShaderProgram.hpp"
 
 namespace nima
 {
@@ -22,6 +23,9 @@ namespace nima
 			float m_ViewMatrix[16];
 			float m_TransformMatrix[16];
 
+			GLShaderProgram m_TexturedShader;
+			GLShaderProgram m_DeformedTexturedShader;
+
 		public:
 			GLRenderer2D();
 
@@ -29,7 +33,8 @@ namespace nima
 			void setBlendMode(BlendMode mode);
 			void setViewportSize(int width, int height);
 			void clear();
-			void drawTextured(const Mat2D& view, const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, float opacity, const Color& color, const Texture* texture);
+			void drawTextured(const Mat2D& view, const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture);
+			void drawTexturedAndDeformed(const Mat2D& view, const Mat2D& transform, const GraphicsBuffer* deformBuffer, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture);
 
 			Texture* makeTexture(const Bitmap* bitmap, int flags);
 			GraphicsBuffer* makeVertexBuffer();

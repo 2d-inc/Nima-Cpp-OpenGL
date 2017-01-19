@@ -1,5 +1,12 @@
 #include "GLRenderer2D.hpp"
+#include "GLIndexBuffer.hpp"
+#include "GLVertexBuffer.hpp"
+#include "GLTexture.hpp"
+#include "../Bitmap/Bitmap.hpp"
+#define GLFW_INCLUDE_GLEXT
 #include <GLFW/glfw3.h>
+
+#define BUFFER_OFFSET(i) ((void*)(i))
 
 using namespace nima;
 
@@ -16,6 +23,36 @@ GLRenderer2D::GLRenderer2D() :
 	glEnable(GL_CULL_FACE);
 	glFrontFace(GL_CW);
 	glDisable(GL_BLEND);
+
+	m_TexturedShader.load(m_Shaders, "Assets/Shaders/Textured.vs", "Assets/Shaders/Textured.fs",
+	{
+		GLShaderAttribute("VertexPosition", 2, 4, 0),
+		GLShaderAttribute("VertexTexCoord", 2, 4, 2)
+	},
+	{
+		GLShaderUniform("ProjectionMatrix"),
+		GLShaderUniform("ViewMatrix"),
+		GLShaderUniform("WorldMatrix"),
+		GLShaderUniform("TextureSampler"),
+		GLShaderUniform("Opacity"),
+		GLShaderUniform("Color")
+	});
+
+	m_DeformedTexturedShader.load(m_Shaders, "Assets/Shaders/Textured.vs", "Assets/Shaders/Textured.fs",
+	{
+		GLShaderAttribute("VertexPosition", 2, 2, 0)
+	},
+	{
+		GLShaderAttribute("VertexTexCoord", 2, 4, 2)
+	},
+	{
+		GLShaderUniform("ProjectionMatrix"),
+		GLShaderUniform("ViewMatrix"),
+		GLShaderUniform("WorldMatrix"),
+		GLShaderUniform("TextureSampler"),
+		GLShaderUniform("Opacity"),
+		GLShaderUniform("Color")
+	});
 }
 
 BlendMode GLRenderer2D::blendMode() const
@@ -92,7 +129,7 @@ void GLRenderer2D::clear()
 	glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void GLRenderer2D::drawTextured(const Mat2D& view, const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, float opacity, const Color& color, const Texture* texture)
+void GLRenderer2D::drawTextured(const Mat2D& view, const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture)
 {
 	m_ViewMatrix[0] = view[0];
 	m_ViewMatrix[1] = view[1];
@@ -107,19 +144,156 @@ void GLRenderer2D::drawTextured(const Mat2D& view, const Mat2D& transform, const
 	m_TransformMatrix[5] = transform[3];
 	m_TransformMatrix[12] = transform[4];
 	m_TransformMatrix[13] = transform[5];
+
+	if (bind(&m_TexturedShader, vertexBuffer))
+	{
+		// This value never changes.
+		glUniform1i(m_TexturedShader.uniform(3), 0);
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, reinterpret_cast<const GLTexture*>(texture)->id());
+
+	glUniformMatrix4fv(m_TexturedShader.uniform(0), 1, GL_FALSE, m_ProjectionMatrix);
+	glUniformMatrix4fv(m_TexturedShader.uniform(1), 1, GL_FALSE, m_ViewMatrix);
+	glUniformMatrix4fv(m_TexturedShader.uniform(2), 1, GL_FALSE, m_TransformMatrix);
+	glUniform1f(m_TexturedShader.uniform(4), opacity);
+	glUniform4fv(m_TexturedShader.uniform(5), 1, color.values());
+
+	const GLIndexBuffer* glIndexBuffer = reinterpret_cast<const GLIndexBuffer*>(indexBuffer);
+	glIndexBuffer->bind();
+	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, BUFFER_OFFSET(sizeof(unsigned short)*offset));
+
+	/*int[] u = m_TexturedShader.Uniforms;
+	GL.UniformMatrix4(u[0], true, ref m_Projection);
+	GL.UniformMatrix4(u[1], true, ref m_ViewTransform);
+	GL.UniformMatrix4(u[2], true, ref m_Transform);
+	//GL.UniformMatrix4(u[2], 1, false, xform);
+
+	GL.ActiveTexture(TextureUnit.Texture0);
+	GL.BindTexture(TextureTarget.Texture2D, texture.Id);
+	GL.Uniform1(u[3], 0);
+
+	GL.Uniform1(u[4], opacity);
+	GL.Uniform4(u[5], color);
+
+	GL.BindBuffer(BufferTarget.ElementArrayBuffer, indexBuffer.Id);
+	GL.DrawElements(BeginMode.Triangles, indexBuffer.Size, DrawElementsType.UnsignedShort, 0);*/
+}
+
+void GLRenderer2D::drawTexturedAndDeformed(const Mat2D& view, const Mat2D& transform, const GraphicsBuffer* deformBuffer, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture)
+{
+	m_ViewMatrix[0] = view[0];
+	m_ViewMatrix[1] = view[1];
+	m_ViewMatrix[4] = view[2];
+	m_ViewMatrix[5] = view[3];
+	m_ViewMatrix[12] = view[4];
+	m_ViewMatrix[13] = view[5];
+
+	m_TransformMatrix[0] = transform[0];
+	m_TransformMatrix[1] = transform[1];
+	m_TransformMatrix[4] = transform[2];
+	m_TransformMatrix[5] = transform[3];
+	m_TransformMatrix[12] = transform[4];
+	m_TransformMatrix[13] = transform[5];
+
+	if (bind(&m_DeformedTexturedShader, deformBuffer, vertexBuffer))
+	{
+		// This value never changes.
+		glUniform1i(m_TexturedShader.uniform(3), 0);
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, reinterpret_cast<const GLTexture*>(texture)->id());
+
+	glUniformMatrix4fv(m_TexturedShader.uniform(0), 1, GL_FALSE, m_ProjectionMatrix);
+	glUniformMatrix4fv(m_TexturedShader.uniform(1), 1, GL_FALSE, m_ViewMatrix);
+	glUniformMatrix4fv(m_TexturedShader.uniform(2), 1, GL_FALSE, m_TransformMatrix);
+	glUniform1f(m_TexturedShader.uniform(4), opacity);
+	glUniform4fv(m_TexturedShader.uniform(5), 1, color.values());
+
+	const GLIndexBuffer* glIndexBuffer = reinterpret_cast<const GLIndexBuffer*>(indexBuffer);
+	glIndexBuffer->bind();
+	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, BUFFER_OFFSET(sizeof(unsigned short)*offset));
+
+	/*int[] u = m_TexturedShader.Uniforms;
+	GL.UniformMatrix4(u[0], true, ref m_Projection);
+	GL.UniformMatrix4(u[1], true, ref m_ViewTransform);
+	GL.UniformMatrix4(u[2], true, ref m_Transform);
+	//GL.UniformMatrix4(u[2], 1, false, xform);
+
+	GL.ActiveTexture(TextureUnit.Texture0);
+	GL.BindTexture(TextureTarget.Texture2D, texture.Id);
+	GL.Uniform1(u[3], 0);
+
+	GL.Uniform1(u[4], opacity);
+	GL.Uniform4(u[5], color);
+
+	GL.BindBuffer(BufferTarget.ElementArrayBuffer, indexBuffer.Id);
+	GL.DrawElements(BeginMode.Triangles, indexBuffer.Size, DrawElementsType.UnsignedShort, 0);*/
 }
 
 Texture* GLRenderer2D::makeTexture(const Bitmap* bitmap, int flags)
 {
-	return nullptr;
+	GLTexture* texture = new GLTexture();
+	glBindTexture(GL_TEXTURE_2D, texture->id());
+
+	GLint format;
+	switch (bitmap->numChannels())
+	{
+		case 4:
+			format = GL_RGBA;
+			break;
+		case 3:
+			format = GL_RGB;
+			break;
+		case 2:
+			format = GL_LUMINANCE_ALPHA;
+			break;
+		case 1:
+			format = GL_LUMINANCE;
+			break;
+		default:
+			format = GL_RGB;
+			break;
+	}
+
+	unsigned int width = bitmap->width();
+	unsigned int height = bitmap->height();
+
+	bool isPowerOf2 = (width != 0) && ((width & (width - 1)) == 0) && (height != 0) && ((height & (height - 1)) == 0);
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexImage2D(GL_TEXTURE_2D,
+	             0,
+	             format,
+	             width, height,
+	             0,
+	             format,
+	             GL_UNSIGNED_BYTE,
+	             bitmap->pixels());
+
+	if (!isPowerOf2 || (flags & Texture::ClampToEdge) != 0x00)
+	{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	}
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, isPowerOf2 ? GL_LINEAR : GL_NEAREST);
+	if (flags & Texture::MipMap)
+	{
+		glGenerateMipmap(GL_TEXTURE_2D);
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+	}
+
+	return texture;
 }
 
 GraphicsBuffer* GLRenderer2D::makeVertexBuffer()
 {
-	return nullptr;
+	return new GLVertexBuffer();
 }
 
 GraphicsBuffer* GLRenderer2D::makeIndexBuffer()
 {
-	return nullptr;
+	return new GLIndexBuffer();
 }
