@@ -40,6 +40,39 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 
 int main(int argc, char** argv)
 {
+	#if 0
+	nima::GameActor* actor = new nima::GameActor();
+
+	try
+	{
+		actor->load("Assets/IK.nima");
+	}
+	catch (nima::OverflowException ex)
+	{
+		printf("Bad data, got an overflow.\n");
+	}
+	catch (nima::UnsupportedVersionException ex)
+	{
+		printf("Unsupported version. %d %d\n", ex.versionFound(), ex.versionRequired());
+	}
+
+	nima::GameActorInstance* actorInstance = actor->makeInstance();
+	nima::ActorAnimation* animation = actorInstance->getAnimation("Untitled");
+	//float animationTime = 0.0f;
+	if(animation == nullptr)
+	{
+		printf("NO ANIMATION\n");
+	}
+	else
+	{
+		
+		animation->apply(0.5, actorInstance, 1.0f);
+		actorInstance->advance(0.16f);
+		//printf("POS %f %f\n", actorInstance->getNode("IK Target")->x(), actorInstance->getNode("IK Target")->y());
+	}
+	#endif
+#if 1
+
 	if (!glfwInit())
 	{
 		return 0;
@@ -146,4 +179,5 @@ int main(int argc, char** argv)
 
 	glfwTerminate();
 	return 0;
+#endif
 }
