@@ -15,7 +15,6 @@ GLShaderProgram::GLShaderProgram() :
 	m_Uniforms(nullptr),
 	m_UniformCount(0)
 {
-
 }
 
 GLShaderProgram::~GLShaderProgram()
@@ -118,7 +117,6 @@ bool GLShaderProgram::load(GLShaderResources& shaderResources, const std::string
 		}
 		m_Uniforms[idx++] = l;
 	}
-
 
 	return true;
 }

@@ -13,6 +13,7 @@ namespace nima
 	{
 		friend class GameActor;
 		friend class GameActorInstance;
+		typedef ActorImage Base;
 		private:
 			// The deform vertex buffer will contain only the deform translation of the vertices.
 			GraphicsBuffer* m_DeformVertexBuffer;
@@ -21,6 +22,7 @@ namespace nima
 		public:
 			GameActorImage();
 			~GameActorImage();
+			void copy(GameActorImage* node, Actor* resetActor);
 
 			ActorNode* makeInstance(Actor* resetActor);
 			void render(GameActorInstance* gameActorInstance, Renderer2D* renderer);

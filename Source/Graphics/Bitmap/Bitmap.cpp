@@ -4,6 +4,7 @@
 #include <png.h>
 #include <cstdio>
 #include <nima/Exceptions/MissingFileException.hpp>
+#include <cmath>
 
 using namespace nima;
 
@@ -64,16 +65,13 @@ void Bitmap::loadFromPNG(const std::string& filename, bool flipY)
 		png_destroy_read_struct( &png_ptr, (png_infopp)nullptr, (png_infopp)nullptr );
 		throw DecodeBitmapException("libpng failed (png_create_info_struct)", filename);
 	}
-//#if ANDROID
+
 	if ( setjmp( png_jmpbuf(png_ptr ) ) )
 	{
 		png_destroy_read_struct( &png_ptr, &info_ptr, (png_infopp)nullptr );
 		throw DecodeBitmapException("not a valid png file", filename);
-		//LOGI( "Bitmap::LoadPNG - \"%s\" is not a valid png file.", filename == nullptr ? "???" : filename );
-		//return false;
 	}
-//#endif
-	//std::string resourcePath = Platform::resourcePath(filename);
+
 	std::FILE* fp = std::fopen(filename.c_str(), "rb");
 	if(fp == nullptr)
 	{
@@ -190,6 +188,25 @@ void Bitmap::loadFromPNG(const std::string& filename, bool flipY)
 
 	delete [] row_pointers;
 	std::fclose(fp);
+}
+
+void Bitmap::multiplyAlpha()
+{
+	if(m_NumChannels == 3)
+	{
+		return;
+	}
+	int numPixels = m_Width * m_Height;
+	int idx = 0;
+	for(int i = 0; i < numPixels; i++)
+	{
+		float alpha = m_Pixels[idx+m_NumChannels-1]/255.0f;
+		for(int c = 0; c < std::max<int>(1,m_NumChannels-1); c++)
+		{
+			m_Pixels[idx+c] = (unsigned char)std::round(m_Pixels[idx+c] * alpha);
+		}
+		idx += m_NumChannels;
+	}
 }
 
 unsigned int Bitmap::numChannels() const

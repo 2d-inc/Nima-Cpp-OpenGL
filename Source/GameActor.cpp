@@ -20,9 +20,15 @@ GameActorImage::~GameActorImage()
 	delete m_DeformVertexBuffer;
 }
 
+void GameActorImage::copy(GameActorImage* node, Actor* resetActor)
+{
+	Base::copy(node, resetActor);
+	m_IndexOffset = node->m_IndexOffset;
+}
+
 ActorNode* GameActorImage::makeInstance(Actor* resetActor)
 {
-	ActorImage* instanceNode = new GameActorImage();
+	GameActorImage* instanceNode = new GameActorImage();
 	instanceNode->copy(this, resetActor);
 	return instanceNode;
 }
@@ -39,18 +45,25 @@ void GameActorImage::render(GameActorInstance* gameActorInstance, Renderer2D* re
 
 	Texture* texture = gameActorInstance->gameActor()->m_Textures[textureIndex()];
 	GraphicsBuffer* vertexBuffer = gameActorInstance->gameActor()->m_VertexBuffer;
-	//GraphicsBuffer* skinnedVertexBuffer = gameActorInstance->gameActor()->m_SkinnedVertexBuffer;
+	GraphicsBuffer* skinnedVertexBuffer = gameActorInstance->gameActor()->m_SkinnedVertexBuffer;
 	GraphicsBuffer* indexBuffer = gameActorInstance->gameActor()->m_IndexBuffer;
 
 	if(connectedBoneCount() > 0)
 	{
+		if(m_DeformVertexBuffer != nullptr)
+		{
 
+		}
+		else
+		{
+			renderer->drawTexturedSkin(worldTransform(), skinnedVertexBuffer, indexBuffer, m_IndexOffset, triangleCount()*3, boneInfluenceMatrices(), boneInfluenceMatricesLength(), renderOpacity(), WhiteColor, texture);
+		}
 	}
 	else
 	{
 		if(m_DeformVertexBuffer != nullptr)
 		{
-			//renderer->drawTexturedAndDeformed(worldTransform(), m_DeformVertexBuffer, vertexBuffer, indexBuffer, m_IndexOffset, triangleCount()*3, renderOpacity(), WhiteColor, texture);
+			renderer->drawTexturedAndDeformed(worldTransform(), m_DeformVertexBuffer, vertexBuffer, indexBuffer, m_IndexOffset, triangleCount()*3, renderOpacity(), WhiteColor, texture);
 		}
 		else
 		{
@@ -111,14 +124,11 @@ ActorImage* GameActor::makeImageNode()
 
 void GameActor::initialize(Renderer2D* renderer)
 {
-	printf("INIT\n");
 	if(textureCount() != 0)
 	{
-		printf("HERE %i\n", m_MaxTextureIndex+1);
 		m_Textures = new Texture*[m_MaxTextureIndex+1];	
 		for(int i = 0; i <= m_MaxTextureIndex; i++)
 		{
-			printf("ONE %s\n", baseFilename().c_str());
 			std::string atlasFilename;
 			if(m_MaxTextureIndex == 0)
 			{
@@ -129,7 +139,6 @@ void GameActor::initialize(Renderer2D* renderer)
 				atlasFilename = baseFilename() + std::to_string(i) + std::string(".png");
 			}
 
-			printf("FILENAME %s\n", atlasFilename.c_str());
 			try
 			{
 				m_Textures[i] = renderer->makeTexture(atlasFilename, Texture::MipMap | Texture::ClampToEdge);

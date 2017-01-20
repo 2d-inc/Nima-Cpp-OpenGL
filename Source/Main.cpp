@@ -77,6 +77,7 @@ int main(int argc, char** argv)
 
 
 	nima::GameActor* actor = new nima::GameActor();
+
 	try
 	{
 		actor->load("Assets/Archer.nima");
@@ -89,6 +90,7 @@ int main(int argc, char** argv)
 	{
 		printf("Unsupported version. %d %d\n", ex.versionFound(), ex.versionRequired());
 	}
+
 	actor->initialize(renderer);
 
 	nima::GameActorInstance* actorInstance = actor->makeInstance();

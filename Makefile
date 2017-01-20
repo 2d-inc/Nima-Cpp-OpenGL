@@ -18,7 +18,7 @@ LIBS			= -lnima -lnima-math -lglfw3 -framework Cocoa -framework OpenGL -framewor
 all: dirs $(OUTPUTFILE)
 
 clean:
-	@$(RM) -fR $(OBJ_DIR)/Main.o
+	@$(RM) -fR $(BUILD_DIR)
 	@cd Nima-Cpp && make clean
 
 dirs:

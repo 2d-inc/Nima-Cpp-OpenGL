@@ -24,6 +24,8 @@ namespace nima
 			unsigned int width() const;
 			unsigned int height() const;
 			unsigned char* pixels() const;
+
+			void multiplyAlpha();
 	};
 }
 

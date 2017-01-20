@@ -23,7 +23,8 @@ namespace nima
 			virtual void setView(const Mat2D& view) = 0;
 			virtual void drawTextured(const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture) = 0;
 			virtual void drawTexturedAndDeformed(const Mat2D& transform, const GraphicsBuffer* deformBuffer, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture) = 0;
-
+			virtual void drawTexturedSkin(const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float* boneMatrices, int boneMatricesLength, float opacity, const Color& color, const Texture* texture) = 0;
+			virtual void drawTexturedAndDeformedSkin(const Mat2D& transform, const GraphicsBuffer* deformBuffer, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float* boneMatrices, int boneMatricesLength, float opacity, const Color& color, const Texture* texture) = 0;
 			virtual Texture* makeTexture(const Bitmap* bitmap, int flags) = 0;
 			virtual Texture* makeTexture(const std::string& filename, int flags) = 0;
 			virtual GraphicsBuffer* makeVertexBuffer() = 0;
