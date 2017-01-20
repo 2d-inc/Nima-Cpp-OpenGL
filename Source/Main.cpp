@@ -1,6 +1,7 @@
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 #include "GameActor.hpp"
+#include <nima/Animation/ActorAnimation.hpp>
 #include <nima/Exceptions/OverflowException.hpp>
 #include <nima/Exceptions/UnsupportedVersionException.hpp>
 #include <nima/Animation/Interpolators/CubicSolver.hpp>
@@ -96,6 +97,17 @@ int main(int argc, char** argv)
 	nima::GameActorInstance* actorInstance = actor->makeInstance();
 	actorInstance->initialize(renderer);
 
+	nima::ActorAnimation* animation = actorInstance->getAnimation("Aim2");
+	float animationTime = 0.0f;
+	if(animation == nullptr)
+	{
+		printf("NO ANIMATION\n");
+	}
+	else
+	{
+		printf("GOT IT\n");
+	}
+
 	int width = 0, height = 0;
 	int lastWidth = width, lastHeight = height;
 	double lastTime = glfwGetTime();
@@ -114,6 +126,15 @@ int main(int argc, char** argv)
 		double time = glfwGetTime();
 		float elapsed = (float)(time - lastTime);
 		lastTime = time;
+
+
+		animationTime += elapsed;
+		while(animationTime > animation->duration())
+		{
+			animationTime -= animation->duration();
+		}
+		animation->apply(animationTime, actorInstance, 1.0f);
+		
 		actorInstance->advance(elapsed);
 		actorInstance->render(renderer);
 
