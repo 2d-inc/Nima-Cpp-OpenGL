@@ -28,6 +28,15 @@ namespace nima
 			void render(GameActorInstance* gameActorInstance, Renderer2D* renderer);
 	};
 
+	class GameActorController
+	{
+		public:
+			virtual ~GameActorController(){}
+			virtual void onAdded(GameActorInstance* actorInstance) = 0;
+			virtual void onRemoved(GameActorInstance* actorInstance) = 0;
+			virtual void advance(GameActorInstance* actorInstance, float seconds) = 0;
+	};
+
 	class GameActor : public Actor
 	{
 		friend class GameActorImage;
@@ -44,22 +53,36 @@ namespace nima
 		public:
 			GameActor();
 			~GameActor();
-			void initialize(Renderer2D* renderer);
+			void initializeGraphics(Renderer2D* renderer);
 			GameActorInstance* makeInstance();
 	};
 
 	class GameActorInstance : public Actor
 	{
+		typedef Actor Base;
 		friend class GameActor;
 		private:
 			GameActorInstance(GameActor* gameActor);
 			GameActor* m_GameActor;
+			std::vector<GameActorController*> m_Controllers;
 
 		public:
 			~GameActorInstance();
-			void initialize(Renderer2D* renderer);
+			void initializeGraphics(Renderer2D* renderer);
 			void render(Renderer2D* renderer);
 			GameActor* gameActor();
+
+			template<class ControllerType, typename... ControllerArguments>
+			ControllerType* addController(ControllerArguments... args)
+			{
+				static_assert(std::is_base_of<GameActorController, ControllerType>::value, "ControllerType not derived from GameActorController");
+				ControllerType* controller = new ControllerType(args...);
+				m_Controllers.push_back(controller);
+				return controller;
+			}
+			void removeController(GameActorController* controller);
+			void advance(float elapsedSeconds) override;
+
 		protected:
 			void updateVertexDeform(ActorImage* image) override;
 	};

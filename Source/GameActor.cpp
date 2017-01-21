@@ -122,7 +122,7 @@ ActorImage* GameActor::makeImageNode()
 	return new GameActorImage();
 }
 
-void GameActor::initialize(Renderer2D* renderer)
+void GameActor::initializeGraphics(Renderer2D* renderer)
 {
 	if(textureCount() != 0)
 	{
@@ -225,10 +225,35 @@ GameActorInstance::GameActorInstance(GameActor* gameActor) :
 
 GameActorInstance::~GameActorInstance()
 {
-
+	for(auto controller : m_Controllers)
+	{
+		controller->onRemoved(this);
+		delete controller;
+	}
+	m_Controllers.clear();
 }
 
-void GameActorInstance::initialize(Renderer2D* renderer)
+void GameActorInstance::advance(float elapsedSeconds)
+{
+	Base::advance(elapsedSeconds);
+	for(auto controller : m_Controllers)
+	{
+		controller->advance(this, elapsedSeconds);
+	}
+}
+
+void GameActorInstance::removeController(GameActorController* controller)
+{
+	auto itr = std::find(m_Controllers.begin(), m_Controllers.end(), controller);
+	if(itr != m_Controllers.end())
+	{
+		(*itr)->onRemoved(this);
+		delete *itr;
+		m_Controllers.erase(itr);
+	}
+}
+
+void GameActorInstance::initializeGraphics(Renderer2D* renderer)
 {
 	// When we initialize a character instance we go and generate the per instance graphical data necessary.
 	// In this case, each image that vertex deforms via animation will get its own buffer...

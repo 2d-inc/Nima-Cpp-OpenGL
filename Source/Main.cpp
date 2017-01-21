@@ -7,6 +7,11 @@
 #include <nima/Animation/Interpolators/CubicSolver.hpp>
 #include "Graphics/Bitmap/Bitmap.hpp"
 #include "Graphics/OpenGL/GLRenderer2D.hpp"
+#include "ArcherController.hpp"
+
+
+// The input is handled globally in this example for the sake of simplicity and clarity.
+nima::Vec2D screenMouse;
 
 void error_callback(int error, const char* description)
 {
@@ -28,6 +33,8 @@ void character_callback(GLFWwindow* window, unsigned int codepoint)
 
 static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
+	screenMouse[0] = (float)xpos;
+	screenMouse[1] = (float)ypos;
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
@@ -40,38 +47,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 
 int main(int argc, char** argv)
 {
-	#if 0
-	nima::GameActor* actor = new nima::GameActor();
-
-	try
-	{
-		actor->load("Assets/IK.nima");
-	}
-	catch (nima::OverflowException ex)
-	{
-		printf("Bad data, got an overflow.\n");
-	}
-	catch (nima::UnsupportedVersionException ex)
-	{
-		printf("Unsupported version. %d %d\n", ex.versionFound(), ex.versionRequired());
-	}
-
-	nima::GameActorInstance* actorInstance = actor->makeInstance();
-	nima::ActorAnimation* animation = actorInstance->getAnimation("Untitled");
-	//float animationTime = 0.0f;
-	if(animation == nullptr)
-	{
-		printf("NO ANIMATION\n");
-	}
-	else
-	{
-		
-		animation->apply(0.5, actorInstance, 1.0f);
-		actorInstance->advance(0.16f);
-		//printf("POS %f %f\n", actorInstance->getNode("IK Target")->x(), actorInstance->getNode("IK Target")->y());
-	}
-	#endif
-#if 1
 
 	if (!glfwInit())
 	{
@@ -85,6 +60,11 @@ int main(int argc, char** argv)
 
 	int initialWindowWidth = 640;
 	int initialWindowHeight = 480;
+
+	nima::Vec2D m_ViewCenter(0.0f, 0.0f);
+	float m_CameraScale = 0.2;
+	nima::Mat2D viewTransform;
+	nima::Mat2D inverseViewTransform;
 
 	GLFWwindow* window = glfwCreateWindow(initialWindowWidth, initialWindowHeight, "Nima", NULL, NULL);
 	if (!window)
@@ -125,59 +105,61 @@ int main(int argc, char** argv)
 		printf("Unsupported version. %d %d\n", ex.versionFound(), ex.versionRequired());
 	}
 
-	actor->initialize(renderer);
+	actor->initializeGraphics(renderer);
 
 	nima::GameActorInstance* actorInstance = actor->makeInstance();
-	actorInstance->initialize(renderer);
+	actorInstance->initializeGraphics(renderer);
 
-	nima::ActorAnimation* animation = actorInstance->getAnimation("Aim2");
-	float animationTime = 0.0f;
-	if(animation == nullptr)
-	{
-		printf("NO ANIMATION\n");
-	}
-	else
-	{
-		printf("GOT IT\n");
-	}
+	ArcherController* characterController = actorInstance->addController<ArcherController>();
 
 	int width = 0, height = 0;
-	int lastWidth = width, lastHeight = height;
+	int lastScreenWidth = width, lastScreenHeight = height;
 	double lastTime = glfwGetTime();
 	while (!glfwWindowShouldClose(window))
 	{
 		glfwGetFramebufferSize(window, &width, &height);
-		if (width != lastWidth || height != lastHeight)
+		if (width != lastScreenWidth || height != lastScreenHeight)
 		{
-			lastWidth = width;
-			lastHeight = height;
+			lastScreenWidth = width;
+			lastScreenHeight = height;
 			// resized.
 			renderer->setViewportSize(width, height);
+
+			m_ViewCenter[1] = height*2.0f;
+
+			viewTransform[0] = m_CameraScale;
+			viewTransform[3] = m_CameraScale;
+			viewTransform[4] = (-m_ViewCenter[0] * m_CameraScale + width/2.0f);
+			viewTransform[5] = (-m_ViewCenter[1] * m_CameraScale + height/2.0f);
+			renderer->setView(viewTransform);
+
+			nima::Mat2D::invert(inverseViewTransform, viewTransform);
 		}
-		renderer->clear();
+
+		nima::Vec2D worldMouse(screenMouse[0], lastScreenHeight - screenMouse[1]);
+		nima::Vec2D::transform(worldMouse, worldMouse, inverseViewTransform);
 
 		double time = glfwGetTime();
 		float elapsed = (float)(time - lastTime);
 		lastTime = time;
 
-
-		animationTime += elapsed;
-		while(animationTime > animation->duration())
-		{
-			animationTime -= animation->duration();
-		}
-		animation->apply(animationTime, actorInstance, 1.0f);
-		
+		characterController->setAimTarget(worldMouse);
 		actorInstance->advance(elapsed);
+
+		renderer->clear();
 		actorInstance->render(renderer);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
+	// Cleanup.
+	delete actorInstance;
+	delete actor;
+	delete renderer;
+
 	glfwDestroyWindow(window);
 
 	glfwTerminate();
 	return 0;
-#endif
 }

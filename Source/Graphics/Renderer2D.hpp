@@ -16,6 +16,7 @@ namespace nima
 	class Renderer2D
 	{
 		public:
+			virtual ~Renderer2D() {}
 			virtual BlendMode blendMode() const = 0;
 			virtual void setBlendMode(BlendMode mode) = 0;
 			virtual void setViewportSize(int width, int height) = 0;
