@@ -20,7 +20,7 @@ GLRenderer2D::GLRenderer2D() :
 {
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	glDisable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+	glDisable(GL_CULL_FACE);
 	glFrontFace(GL_CCW);
 	glDisable(GL_BLEND);
 

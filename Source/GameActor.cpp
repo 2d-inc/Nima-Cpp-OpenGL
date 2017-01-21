@@ -235,11 +235,12 @@ GameActorInstance::~GameActorInstance()
 
 void GameActorInstance::advance(float elapsedSeconds)
 {
-	Base::advance(elapsedSeconds);
 	for(auto controller : m_Controllers)
 	{
 		controller->advance(this, elapsedSeconds);
 	}
+	
+	Base::advance(elapsedSeconds);
 }
 
 void GameActorInstance::removeController(GameActorController* controller)

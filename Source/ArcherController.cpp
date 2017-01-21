@@ -1,6 +1,8 @@
 #include "ArcherController.hpp"
 
-ArcherController::ArcherController()
+ArcherController::ArcherController() : 
+	m_Aim(nullptr),
+	m_AimAnimationTime(0.0f)
 {
 
 }
@@ -24,9 +26,9 @@ void ArcherController::onAdded(nima::GameActorInstance* actorInstance)
 				m_Aim->apply(position, actorInstance, 1.0f);
 				auto worldTransform = muzzle->worldTransform();
 				AimSlice& slice = m_AimLookup[i];
-				nima::Vec2D::normalize(slice.point, nima::Vec2D(worldTransform[0], worldTransform[1]));
-				slice.dir[0] = worldTransform[4];
-				slice.dir[4] = worldTransform[5];
+				nima::Vec2D::normalize(slice.dir, nima::Vec2D(worldTransform[0], worldTransform[1]));
+				slice.point[0] = worldTransform[4];
+				slice.point[1] = worldTransform[5];
 			}
 		}
 	}
@@ -81,7 +83,7 @@ void ArcherController::onRemoved(nima::GameActorInstance* actorInstance)
 
 }
 
-void ArcherController::advance(nima::GameActorInstance* actorInstance, float seconds)
+void ArcherController::advance(nima::GameActorInstance* actorInstance, float elapsedSeconds)
 {
 	
 	if(m_Aim != nullptr)
@@ -91,6 +93,14 @@ void ArcherController::advance(nima::GameActorInstance* actorInstance, float sec
 		nima::Vec2D actorTarget;
 		nima::Mat2D::invert(inverseToActor, root->worldTransform());
 		nima::Vec2D::transform(actorTarget, m_WorldTarget, inverseToActor);
+        
+        float scaleX = 1.0f;
+        if(m_WorldTarget[0] < root->x())
+        {
+            scaleX = -1.0;
+        }
+        
+        root->scaleX(scaleX);
 
 		// See where the target is relative to the tip of the weapon
 		float maxDot = -1.0f;
@@ -100,8 +110,6 @@ void ArcherController::advance(nima::GameActorInstance* actorInstance, float sec
 		for(int i = 0; i < AimSliceCount; i++)
 		{
 			AimSlice& aim = lookup[i];
-			//var aimDir = vec2.clone(aim[0]);
-			//var aimPos = vec2.clone(aim[1]);
 
 			nima::Vec2D targetDir;
 			nima::Vec2D::subtract(targetDir, actorTarget, aim.point);
@@ -114,16 +122,12 @@ void ArcherController::advance(nima::GameActorInstance* actorInstance, float sec
 			}
 		}
 
-		float aimTime = bestIndex/(float)(AimSliceCount-1) * m_Aim->duration();
-		m_Aim->apply(aimTime, actorInstance, 1.0f);
-	}
+		float targetAimTime = bestIndex/(float)(AimSliceCount-1) * m_Aim->duration();
 
-	/*animationTime += elapsed;
-	while(animationTime > animation->duration())
-	{
-		animationTime -= animation->duration();
+		m_AimAnimationTime += (targetAimTime-m_AimAnimationTime) * std::min(1.0f, elapsedSeconds*10.0f);
+
+		m_Aim->apply(m_AimAnimationTime, actorInstance, 1.0f);
 	}
-	animation->apply(animationTime, actorInstance, 1.0f);*/
 		
 }
 

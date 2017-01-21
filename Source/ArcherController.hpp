@@ -7,6 +7,7 @@ class ArcherController : public nima::GameActorController
 {
 	private:
 		nima::ActorAnimation* m_Aim;
+		float m_AimAnimationTime;
 		struct AimSlice
 		{
 			nima::Vec2D point;

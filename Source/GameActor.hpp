@@ -78,6 +78,7 @@ namespace nima
 				static_assert(std::is_base_of<GameActorController, ControllerType>::value, "ControllerType not derived from GameActorController");
 				ControllerType* controller = new ControllerType(args...);
 				m_Controllers.push_back(controller);
+                controller->onAdded(this);
 				return controller;
 			}
 			void removeController(GameActorController* controller);
