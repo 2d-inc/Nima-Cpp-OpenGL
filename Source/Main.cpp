@@ -12,7 +12,7 @@
 
 // The input is handled globally in this example for the sake of simplicity and clarity.
 nima::Vec2D screenMouse;
-
+ArcherController* characterController = nullptr;
 void error_callback(int error, const char* description)
 {
 	puts(description);
@@ -20,10 +20,36 @@ void error_callback(int error, const char* description)
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	if(action == GLFW_REPEAT)
+	{
+		return;
+	}
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 	{
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
 		return;
+	}
+
+	switch(key)
+	{
+		case GLFW_KEY_A:
+			if(characterController != nullptr)
+			{
+				characterController->moveLeft(action == GLFW_PRESS);
+			}
+			break;
+		case GLFW_KEY_D:
+			if(characterController != nullptr)
+			{
+				characterController->moveRight(action == GLFW_PRESS);
+			}
+			break;
+		case GLFW_KEY_LEFT_SHIFT:
+			if(characterController != nullptr)
+			{
+				characterController->run(action == GLFW_PRESS);
+			}
+			break;
 	}
 }
 
@@ -110,7 +136,7 @@ int main(int argc, char** argv)
 	nima::GameActorInstance* actorInstance = actor->makeInstance();
 	actorInstance->initializeGraphics(renderer);
 
-	ArcherController* characterController = actorInstance->addController<ArcherController>();
+	characterController = actorInstance->addController<ArcherController>();
 
 	int width = 0, height = 0;
 	int lastScreenWidth = width, lastScreenHeight = height;

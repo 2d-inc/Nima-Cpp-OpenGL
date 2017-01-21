@@ -1,8 +1,21 @@
 #include "ArcherController.hpp"
+#include <cmath>
 
 ArcherController::ArcherController() : 
+	m_Idle(nullptr),
 	m_Aim(nullptr),
-	m_AimAnimationTime(0.0f)
+	m_Walk(nullptr),
+	m_Run(nullptr),
+	m_WalkToIdle(nullptr),
+	m_AimAnimationTime(0.0f),
+	m_IdleTime(0.0f),
+	m_WalkToIdleTime(0.0f),
+	m_WalkTime(0.0f),
+	m_RunTime(0.0f),
+	m_HorizontalSpeed(0.0f),
+	m_IsRunning(false),
+	m_WalkMix(0.0f),
+	m_RunMix(0.0f)
 {
 
 }
@@ -14,7 +27,12 @@ ArcherController::~ArcherController()
 
 void ArcherController::onAdded(nima::GameActorInstance* actorInstance)
 {
+	m_Idle = actorInstance->animation("Idle");
 	m_Aim = actorInstance->animation("Aim2");
+	m_Walk = actorInstance->animation("Walk");
+	m_Run = actorInstance->animation("Run");
+	m_WalkToIdle = actorInstance->animation("WalkToIdle");
+
 	if(m_Aim != nullptr)
 	{
 		nima::ActorNode* muzzle = actorInstance->node("Muzzle");
@@ -26,56 +44,31 @@ void ArcherController::onAdded(nima::GameActorInstance* actorInstance)
 				m_Aim->apply(position, actorInstance, 1.0f);
 				auto worldTransform = muzzle->worldTransform();
 				AimSlice& slice = m_AimLookup[i];
+
+				// Extract forward vector and position.
 				nima::Vec2D::normalize(slice.dir, nima::Vec2D(worldTransform[0], worldTransform[1]));
 				slice.point[0] = worldTransform[4];
 				slice.point[1] = worldTransform[5];
 			}
+			if(m_Walk != nullptr)
+			{
+				// Apply first frame of walk to extract the aim while walking lookup.
+				m_Walk->apply(0.0f, actorInstance, 1.0);
+				for(int i = 0; i < AimSliceCount; i++)
+				{
+					float position = i / (float)(AimSliceCount-1) * m_Aim->duration();
+					m_Aim->apply(position, actorInstance, 1.0f);
+					auto worldTransform = muzzle->worldTransform();
+					AimSlice& slice = m_AimWalkingLookup[i];
+
+					// Extract forward vector and position.
+					nima::Vec2D::normalize(slice.dir, nima::Vec2D(worldTransform[0], worldTransform[1]));
+					slice.point[0] = worldTransform[4];
+					slice.point[1] = worldTransform[5];
+				}
+			}
 		}
 	}
-	/*var aim = this._AimAnimation = new AnimationInstance(actor.getAnimation("Aim2"));
-				if(aim)
-				{
-					// Find arrow node.
-					var arrowNode = null;
-					for(var i = 0; i < actor._Nodes.length; i++)
-					{
-						var node = actor._Nodes[i];
-
-						if(node._Name === "Muzzle")
-						{
-							arrowNode = node;
-							break;
-						}
-					}
-					// Build look up table.
-					if(arrowNode)
-					{
-						for(var i = 0; i < _AimLookup.length; i++)
-						{
-							var position = i / (_AimLookup.length-1) * aim._Max;
-							aim.setTime(position, true);
-							aim.apply(actor, 1.0);
-							var m = arrowNode.getWorldTransform();
-							_AimLookup[i] = [
-								vec2.normalize(vec2.create(), vec2.set(vec2.create(), m[0], m[1])),
-								vec2.set(vec2.create(), m[4], m[5]),
-							];
-						}
-
-						// Apply first frame of walk to extract the aim while walking lookup.
-						this._WalkAnimation.apply(actor, 1.0);
-						for(var i = 0; i < _AimWalkingLookup.length; i++)
-						{
-							var position = i / (_AimWalkingLookup.length-1) * aim._Max;
-							aim.setTime(position, true);
-							aim.apply(actor, 1.0);
-							var m = arrowNode.getWorldTransform();
-							_AimWalkingLookup[i] = [
-								vec2.normalize(vec2.create(), vec2.set(vec2.create(), m[0], m[1])),
-								vec2.set(vec2.create(), m[4], m[5]),
-							];
-						}
-					}*/
 }
 
 void ArcherController::onRemoved(nima::GameActorInstance* actorInstance)
@@ -83,30 +76,143 @@ void ArcherController::onRemoved(nima::GameActorInstance* actorInstance)
 
 }
 
+void ArcherController::moveLeft(bool move)
+{
+	if(move)
+	{
+		m_HorizontalSpeed = -1.0;
+	}
+	else if(m_HorizontalSpeed == -1.0f)
+	{
+		m_HorizontalSpeed = 0.0f;
+	}
+}
+
+void ArcherController::moveRight(bool move)
+{
+	if(move)
+	{
+		m_HorizontalSpeed = 1.0;
+	}
+	else if(m_HorizontalSpeed == 1.0f)
+	{
+		m_HorizontalSpeed = 0.0f;
+	}
+}
+
+void ArcherController::run(bool run)
+{
+	m_IsRunning = run;
+}
+
 void ArcherController::advance(nima::GameActorInstance* actorInstance, float elapsedSeconds)
 {
+	nima::ActorNode* root = actorInstance->root();
+
+    float scaleX = 1.0f;
+    if(m_WorldTarget[0] < root->x())
+    {
+        scaleX = -1.0;
+    }
+    root->scaleX(scaleX);
+
+	if(m_Idle != nullptr)
+	{
+		m_IdleTime = std::fmod(m_IdleTime + elapsedSeconds, m_Idle->duration());
+		m_Idle->apply(m_IdleTime, actorInstance, 1.0f);
+	}
 	
+	if(m_HorizontalSpeed != 0.0f)
+	{
+		if(m_IsRunning)
+		{
+			if(m_WalkMix > 0.0f)
+			{
+				m_WalkMix = std::max(0.0f, m_WalkMix - elapsedSeconds * MixSpeed);
+			}
+			if(m_RunMix < 1.0f)
+			{
+				m_RunMix = std::min(1.0f, m_RunMix + elapsedSeconds * MixSpeed);
+			}
+		}
+		else
+		{
+			if(m_WalkMix < 1.0f)
+			{
+				m_WalkMix = std::min(1.0f, m_WalkMix + elapsedSeconds * MixSpeed);
+			}
+			if(m_RunMix > 0.0f)
+			{
+				m_RunMix = std::max(0.0f, m_RunMix - elapsedSeconds * MixSpeed);
+			}
+		}
+
+		m_WalkToIdleTime = 0.0f;
+	}
+	else
+	{
+		if(m_WalkMix > 0.0f)
+		{
+			m_WalkMix = std::max(0.0f, m_WalkMix - elapsedSeconds * MixSpeed);
+		}
+		if(m_RunMix > 0.0f)
+		{
+			m_RunMix = std::max(0.0f, m_RunMix - elapsedSeconds * MixSpeed);
+		}
+	}
+
+	float moveSpeed = m_IsRunning ? 1100.0f : 600.0f;
+	root->x(root->x() + m_HorizontalSpeed * elapsedSeconds * moveSpeed);
+	if(m_Walk != nullptr && m_Run != nullptr)
+	{
+		if(m_HorizontalSpeed == 0.0f && m_WalkMix == 0.0f && m_RunMix == 0.0f)
+		{
+			m_WalkTime = 0.0f;
+			m_RunTime = 0.0f;
+		}
+		else
+		{
+			m_WalkTime = m_WalkTime + elapsedSeconds * 0.9f * (m_HorizontalSpeed > 0 ? 1.0f : -1.0f) * scaleX;
+			// Sync up the run and walk times.
+			m_WalkTime = std::fmod(m_WalkTime, m_Walk->duration());
+			if(m_WalkTime < 0.0f)
+			{
+				m_WalkTime += m_Walk->duration();
+			}
+			m_RunTime = m_WalkTime / m_Walk->duration() * m_Run->duration();
+		}
+
+		if(m_WalkMix != 0.0f)
+		{
+			m_Walk->apply(m_WalkTime, actorInstance, m_WalkMix);
+		}
+		if(m_RunMix != 0.0f)
+		{
+			m_Run->apply(m_RunTime, actorInstance, m_RunMix);
+		}
+
+
+		if(m_WalkToIdle != nullptr && m_HorizontalSpeed == 0.0f && m_WalkToIdleTime < m_WalkToIdle->duration())
+		{
+			m_WalkToIdleTime += elapsedSeconds;
+			m_WalkToIdle->apply(m_WalkToIdleTime, actorInstance, std::min(1.0f, m_WalkToIdleTime/m_WalkToIdle->duration()));
+			//m_RunMix = m_WalkMix = 0.0;
+		}
+	}
+
 	if(m_Aim != nullptr)
 	{
-		nima::ActorNode* root = actorInstance->root();
 		nima::Mat2D inverseToActor;
 		nima::Vec2D actorTarget;
 		nima::Mat2D::invert(inverseToActor, root->worldTransform());
 		nima::Vec2D::transform(actorTarget, m_WorldTarget, inverseToActor);
         
-        float scaleX = 1.0f;
-        if(m_WorldTarget[0] < root->x())
-        {
-            scaleX = -1.0;
-        }
-        
-        root->scaleX(scaleX);
 
 		// See where the target is relative to the tip of the weapon
 		float maxDot = -1.0f;
 		int bestIndex = 0;
-		AimSlice (&lookup)[AimSliceCount] = m_AimLookup;
-		//auto lookup = m_AimLookup;//_This._HorizontalSpeed === 0 ? _AimLookup : _AimWalkingLookup;
+		AimSlice (&lookup)[AimSliceCount] = m_HorizontalSpeed == 0.0f ? m_AimLookup : m_AimWalkingLookup;
+		
 		for(int i = 0; i < AimSliceCount; i++)
 		{
 			AimSlice& aim = lookup[i];

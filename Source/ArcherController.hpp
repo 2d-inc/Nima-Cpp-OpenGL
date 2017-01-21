@@ -6,16 +6,31 @@
 class ArcherController : public nima::GameActorController
 {
 	private:
+		nima::ActorAnimation* m_Idle;
 		nima::ActorAnimation* m_Aim;
+		nima::ActorAnimation* m_Walk;
+		nima::ActorAnimation* m_Run;
+		nima::ActorAnimation* m_WalkToIdle;
 		float m_AimAnimationTime;
+		float m_IdleTime;
+		float m_WalkToIdleTime;
+		float m_WalkTime;
+		float m_RunTime;
+		float m_HorizontalSpeed;
+		bool m_IsRunning;
+		float m_WalkMix;
+		float m_RunMix;
+
 		struct AimSlice
 		{
 			nima::Vec2D point;
 			nima::Vec2D dir;
 		};
-		static const int AimSliceCount = 40;
+		constexpr static const int AimSliceCount = 60;
+		constexpr static const float MixSpeed = 3.5f;
 
 		AimSlice m_AimLookup[AimSliceCount];
+		AimSlice m_AimWalkingLookup[AimSliceCount];
 		nima::Vec2D m_WorldTarget;
 
 	public:
@@ -27,6 +42,10 @@ class ArcherController : public nima::GameActorController
 		void advance(nima::GameActorInstance* actorInstance, float seconds) override;
 
 		void setAimTarget(const nima::Vec2D& worldTargetTranslation);
+
+		void moveLeft(bool move);
+		void moveRight(bool move);
+		void run(bool run);
 };
 
 
