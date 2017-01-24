@@ -24,7 +24,7 @@ clean:
 dirs:
 	mkdir -p $(OBJ_DIR)
 	$(foreach folder,$(CPP_FOLDERS),$(shell mkdir -p $(folder)))
-	@cd Nima-Cpp && make
+	@cd Nima-Cpp && make -j4
 
 # Build sources
 $(OUTPUTFILE): $(CPP_OBJECTS)
