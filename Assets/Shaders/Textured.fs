@@ -10,6 +10,6 @@ varying vec2 TexCoord;
 void main(void)
 {
 	vec4 color = texture2D(TextureSampler, TexCoord) * Color;
-	color.a *= Opacity;
+	color *= Opacity;
 	gl_FragColor = color;
 }
