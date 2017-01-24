@@ -88,7 +88,7 @@ int main(int argc, char** argv)
 	int initialWindowHeight = 480;
 
 	nima::Vec2D m_ViewCenter(0.0f, 0.0f);
-	float m_CameraScale = 0.2;
+	float m_CameraScale = 1.0;
 	nima::Mat2D viewTransform;
 	nima::Mat2D inverseViewTransform;
 
@@ -120,7 +120,8 @@ int main(int argc, char** argv)
 
 	try
 	{
-		actor->load("Assets/Archer.nima");
+		//actor->load("Assets/Archer.nima");
+		actor->load("Assets/Pilot/Pilot.nima");
 	}
 	catch (nima::OverflowException ex)
 	{
@@ -136,7 +137,9 @@ int main(int argc, char** argv)
 	nima::GameActorInstance* actorInstance = actor->makeInstance();
 	actorInstance->initializeGraphics(renderer);
 
-	characterController = actorInstance->addController<ArcherController>();
+	nima::ActorAnimation* animation = actorInstance->animation("Untitled");
+	float animationTime = 0.0f;
+	//characterController = actorInstance->addController<ArcherController>();
 
 	int width = 0, height = 0;
 	int lastScreenWidth = width, lastScreenHeight = height;
@@ -151,7 +154,7 @@ int main(int argc, char** argv)
 			// resized.
 			renderer->setViewportSize(width, height);
 
-			m_ViewCenter[1] = height*2.0f;
+			m_ViewCenter[1] = 0.0f;//height;
 
 			viewTransform[0] = m_CameraScale;
 			viewTransform[3] = m_CameraScale;
@@ -169,7 +172,16 @@ int main(int argc, char** argv)
 		float elapsed = (float)(time - lastTime);
 		lastTime = time;
 
-		characterController->setAimTarget(worldMouse);
+		if(animation != nullptr)
+		{
+			animationTime = std::fmod(animationTime + elapsed, animation->duration());
+			animation->apply(animationTime, actorInstance, 1.0f);
+		}
+
+		if(characterController != nullptr)
+		{
+			characterController->setAimTarget(worldMouse);
+		}
 		actorInstance->advance(elapsed);
 
 		renderer->clear();

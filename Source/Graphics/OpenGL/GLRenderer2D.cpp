@@ -99,6 +99,7 @@ BlendMode GLRenderer2D::blendMode() const
 void GLRenderer2D::setBlendMode(BlendMode mode)
 {
 	m_BlendMode = mode;
+	m_BlendMode = BlendMode::Normal;
 	switch (m_BlendMode)
 	{
 		case BlendMode::Off:
@@ -106,7 +107,10 @@ void GLRenderer2D::setBlendMode(BlendMode mode)
 			break;
 		case BlendMode::Normal:
 			glEnable(GL_BLEND);
+			//glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 			glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+			//glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE);
+			 //_GL.blendFuncSeparate(_GL.SRC_ALPHA, _GL.ONE_MINUS_SRC_ALPHA, _GL.SRC_ALPHA, _GL.ONE);
 			break;
 		case BlendMode::Additive:
 			glEnable(GL_BLEND);
@@ -291,7 +295,7 @@ void GLRenderer2D::drawTexturedSkin(const Mat2D& transform, const GraphicsBuffer
 	glUniformMatrix4fv(m_TexturedSkinShader.uniform(2), 1, GL_FALSE, m_TransformMatrix);
 	glUniform1f(m_TexturedSkinShader.uniform(4), opacity);
 	glUniform4fv(m_TexturedSkinShader.uniform(5), 1, color.values());
-	glUniform3fv(m_TexturedSkinShader.uniform(6), boneMatricesLength/3, boneMatrices);
+	glUniform3fv(m_TexturedSkinShader.uniform(6), boneMatricesLength / 3, boneMatrices);
 	//GL.Uniform3(u[6], boneMatrices.Length, boneMatrices);
 
 	const GLIndexBuffer* glIndexBuffer = reinterpret_cast<const GLIndexBuffer*>(indexBuffer);
@@ -324,7 +328,7 @@ void GLRenderer2D::drawTexturedAndDeformedSkin(const Mat2D& transform, const Gra
 	glUniformMatrix4fv(m_DeformedTexturedSkinShader.uniform(2), 1, GL_FALSE, m_TransformMatrix);
 	glUniform1f(m_DeformedTexturedSkinShader.uniform(4), opacity);
 	glUniform4fv(m_DeformedTexturedSkinShader.uniform(5), 1, color.values());
-	glUniform3fv(m_DeformedTexturedSkinShader.uniform(6), boneMatricesLength/3, boneMatrices);
+	glUniform3fv(m_DeformedTexturedSkinShader.uniform(6), boneMatricesLength / 3, boneMatrices);
 	//GL.Uniform3(u[6], boneMatrices.Length, boneMatrices);
 
 	const GLIndexBuffer* glIndexBuffer = reinterpret_cast<const GLIndexBuffer*>(indexBuffer);

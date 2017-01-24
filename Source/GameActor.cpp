@@ -10,6 +10,7 @@ using namespace nima;
 
 GameActorImage::GameActorImage() :
 	m_DeformVertexBuffer(nullptr),
+	m_VertexBuffer(nullptr),
 	m_IndexOffset(0)
 {
 
@@ -24,6 +25,7 @@ void GameActorImage::copy(GameActorImage* node, Actor* resetActor)
 {
 	Base::copy(node, resetActor);
 	m_IndexOffset = node->m_IndexOffset;
+	m_VertexBuffer = node->m_VertexBuffer;
 }
 
 ActorNode* GameActorImage::makeInstance(Actor* resetActor)
@@ -37,37 +39,44 @@ static Color WhiteColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 void GameActorImage::render(GameActorInstance* gameActorInstance, Renderer2D* renderer)
 {
-	if(textureIndex() < 0)
+	if(textureIndex() < 0 || renderOpacity() <= 0.0f)
 	{
 		return;
 	}
 	renderer->setBlendMode(blendMode());
 
 	Texture* texture = gameActorInstance->gameActor()->m_Textures[textureIndex()];
-	GraphicsBuffer* vertexBuffer = gameActorInstance->gameActor()->m_VertexBuffer;
-	GraphicsBuffer* skinnedVertexBuffer = gameActorInstance->gameActor()->m_SkinnedVertexBuffer;
+	//GraphicsBuffer* vertexBuffer = gameActorInstance->gameActor()->m_VertexBuffer;
+	//GraphicsBuffer* skinnedVertexBuffer = gameActorInstance->gameActor()->m_SkinnedVertexBuffer;
 	GraphicsBuffer* indexBuffer = gameActorInstance->gameActor()->m_IndexBuffer;
+
+	if(m_DeformVertexBuffer != nullptr && isVertexDeformDirty())
+	{
+		m_DeformVertexBuffer->setData(animationDeformedVertices(), sizeof(float) * vertexCount() * 2 /*2 floats per deform data, the x and y translation value*/, BufferHint::Dynamic);
+		isVertexDeformDirty(false);
+	}
+
 
 	if(connectedBoneCount() > 0)
 	{
 		if(m_DeformVertexBuffer != nullptr)
 		{
-
+			renderer->drawTexturedAndDeformedSkin(worldTransform(), m_DeformVertexBuffer, m_VertexBuffer, indexBuffer, m_IndexOffset, triangleCount()*3, boneInfluenceMatrices(), boneInfluenceMatricesLength(), renderOpacity(), WhiteColor, texture);
 		}
 		else
 		{
-			renderer->drawTexturedSkin(worldTransform(), skinnedVertexBuffer, indexBuffer, m_IndexOffset, triangleCount()*3, boneInfluenceMatrices(), boneInfluenceMatricesLength(), renderOpacity(), WhiteColor, texture);
+			renderer->drawTexturedSkin(worldTransform(), m_VertexBuffer, indexBuffer, m_IndexOffset, triangleCount()*3, boneInfluenceMatrices(), boneInfluenceMatricesLength(), renderOpacity(), WhiteColor, texture);
 		}
 	}
 	else
 	{
 		if(m_DeformVertexBuffer != nullptr)
 		{
-			renderer->drawTexturedAndDeformed(worldTransform(), m_DeformVertexBuffer, vertexBuffer, indexBuffer, m_IndexOffset, triangleCount()*3, renderOpacity(), WhiteColor, texture);
+			renderer->drawTexturedAndDeformed(worldTransform(), m_DeformVertexBuffer, m_VertexBuffer, indexBuffer, m_IndexOffset, triangleCount()*3, renderOpacity(), WhiteColor, texture);
 		}
 		else
 		{
-			renderer->drawTextured(worldTransform(), vertexBuffer, indexBuffer, m_IndexOffset, triangleCount()*3, renderOpacity(), WhiteColor, texture);
+			renderer->drawTextured(worldTransform(), m_VertexBuffer, indexBuffer, m_IndexOffset, triangleCount()*3, renderOpacity(), WhiteColor, texture);
 		}
 	}
 }
@@ -83,6 +92,15 @@ GameActor::GameActor() :
 
 GameActor::~GameActor()
 {
+	// delete m_VertexBuffer from image nodes with deform.
+	for(int i = 0; i < m_ImageNodeCount; i++)
+	{
+		GameActorImage* actorImage = reinterpret_cast<GameActorImage*>(m_ImageNodes[i]);
+		if(actorImage->doesAnimationVertexDeform())
+		{
+			delete actorImage->m_VertexBuffer;
+		}
+	}
 	if(m_Textures != nullptr)
 	{
 		for(int i = 0; i <= m_MaxTextureIndex; i++)
@@ -168,27 +186,47 @@ void GameActor::initializeGraphics(Renderer2D* renderer)
 	for(int i = 0; i < m_ImageNodeCount; i++)
 	{
 		GameActorImage* actorImage = reinterpret_cast<GameActorImage*>(m_ImageNodes[i]);
-		// N.B. Even vertex deformed buffers get full stride. This wastes a little bit of data as each vertex deformed
-		// mesh will also have their original positions stored on the GPU, but this saves quite a bit of extra branching.
 
-		std::vector<float>& currentVertexData = actorImage->connectedBoneCount() > 0 ? skinnedVertexData : vertexData;
-		
-		// Calculate the offset in our contiguous vertex buffer.
-		unsigned short firstVertexIndex = (unsigned short)(currentVertexData.size()/actorImage->vertexStride());
-		float* vertices = actorImage->vertices();
-		int size = actorImage->vertexCount() * actorImage->vertexStride();
-		for(int j = 0; j < size; j++)
+		// When the image has vertex deform we actually get two vertex buffers per image.
+		// One that is static with all our base vertex data in there and one with the override positions.
+		// TODO: optimize this to remove the positions from the base one.
+		if(actorImage->doesAnimationVertexDeform())
 		{
-			currentVertexData.push_back(vertices[j]);
+			actorImage->m_VertexBuffer = renderer->makeVertexBuffer();
+			actorImage->m_VertexBuffer->setData(actorImage->vertices(), sizeof(float) * actorImage->vertexCount() * actorImage->vertexStride(), BufferHint::Static);
+
+			actorImage->m_IndexOffset = indexData.size();
+			unsigned short* tris = actorImage->triangles();
+			int indexCount = actorImage->triangleCount() * 3;
+			for(int j = 0; j < indexCount; j++)
+			{
+				indexData.push_back(tris[j]);
+			}
 		}
-
-		// N.B. There's an implication here that each mesh cannot have more than 65,535 vertices.
-		actorImage->m_IndexOffset = indexData.size();
-		unsigned short* tris = actorImage->triangles();
-		int indexCount = actorImage->triangleCount() * 3;
-		for(int j = 0; j < indexCount; j++)
+		else
 		{
-			indexData.push_back(tris[j]+firstVertexIndex);
+			// N.B. Even vertex deformed buffers get full stride. This wastes a little bit of data as each vertex deformed
+			// mesh will also have their original positions stored on the GPU, but this saves quite a bit of extra branching.
+
+			std::vector<float>& currentVertexData = actorImage->connectedBoneCount() > 0 ? skinnedVertexData : vertexData;
+			
+			// Calculate the offset in our contiguous vertex buffer.
+			unsigned short firstVertexIndex = (unsigned short)(currentVertexData.size()/actorImage->vertexStride());
+			float* vertices = actorImage->vertices();
+			int size = actorImage->vertexCount() * actorImage->vertexStride();
+			for(int j = 0; j < size; j++)
+			{
+				currentVertexData.push_back(vertices[j]);
+			}
+
+			// N.B. There's an implication here that each mesh cannot have more than 65,535 vertices.
+			actorImage->m_IndexOffset = indexData.size();
+			unsigned short* tris = actorImage->triangles();
+			int indexCount = actorImage->triangleCount() * 3;
+			for(int j = 0; j < indexCount; j++)
+			{
+				indexData.push_back(tris[j]+firstVertexIndex);
+			}
 		}
 	}
 
@@ -207,6 +245,24 @@ void GameActor::initializeGraphics(Renderer2D* renderer)
 	{
 		m_IndexBuffer = renderer->makeIndexBuffer();
 		m_IndexBuffer->setData(indexData.data(), sizeof(unsigned short) * indexData.size(), BufferHint::Static);
+	}
+
+	// Update the vertex buffers being referenced.
+	for(int i = 0; i < m_ImageNodeCount; i++)
+	{
+		GameActorImage* actorImage = reinterpret_cast<GameActorImage*>(m_ImageNodes[i]);
+
+		if(!actorImage->doesAnimationVertexDeform())
+		{
+			if(actorImage->connectedBoneCount() > 0)
+			{
+				actorImage->m_VertexBuffer = m_SkinnedVertexBuffer;
+			}
+			else
+			{
+				actorImage->m_VertexBuffer = m_VertexBuffer;	
+			}
+		}
 	}
 }
 

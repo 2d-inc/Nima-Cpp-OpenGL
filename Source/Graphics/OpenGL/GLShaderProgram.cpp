@@ -142,6 +142,7 @@ void GLShaderProgram::bind(const GLVertexBuffer* vertexBuffer, const GLVertexBuf
 	glUseProgram(m_Id);
 
 	vertexBuffer->bind();
+	
 	for(int i = 0; i < m_AttributeCount; i++)
 	{
 		const GLShaderAttribute& attribute = m_Attributes[i];

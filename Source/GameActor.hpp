@@ -17,6 +17,7 @@ namespace nima
 		private:
 			// The deform vertex buffer will contain only the deform translation of the vertices.
 			GraphicsBuffer* m_DeformVertexBuffer;
+			GraphicsBuffer* m_VertexBuffer;
 			int m_IndexOffset;
 
 		public:
@@ -26,6 +27,7 @@ namespace nima
 
 			ActorNode* makeInstance(Actor* resetActor);
 			void render(GameActorInstance* gameActorInstance, Renderer2D* renderer);
+			void advance(float elapsedSeconds);
 	};
 
 	class GameActorController
