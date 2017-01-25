@@ -27,7 +27,6 @@ namespace nima
 
 			ActorNode* makeInstance(Actor* resetActor);
 			void render(GameActorInstance* gameActorInstance, Renderer2D* renderer);
-			void advance(float elapsedSeconds);
 	};
 
 	class GameActorController
