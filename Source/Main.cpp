@@ -88,7 +88,7 @@ int main(int argc, char** argv)
 	int initialWindowHeight = 480;
 
 	nima::Vec2D m_ViewCenter(0.0f, 0.0f);
-	float m_CameraScale = 1.0;
+	float m_CameraScale = 0.3f;
 	nima::Mat2D viewTransform;
 	nima::Mat2D inverseViewTransform;
 
@@ -120,8 +120,7 @@ int main(int argc, char** argv)
 
 	try
 	{
-		//actor->load("Assets/Archer.nima");
-		actor->load("Assets/Pilot/Pilot.nima");
+		actor->load("Assets/Archer.nima");
 	}
 	catch (nima::OverflowException ex)
 	{
@@ -139,7 +138,7 @@ int main(int argc, char** argv)
 
 	nima::ActorAnimation* animation = actorInstance->animation("Untitled");
 	float animationTime = 0.0f;
-	//characterController = actorInstance->addController<ArcherController>();
+	characterController = actorInstance->addController<ArcherController>();
 
 	int width = 0, height = 0;
 	int lastScreenWidth = width, lastScreenHeight = height;
@@ -154,7 +153,7 @@ int main(int argc, char** argv)
 			// resized.
 			renderer->setViewportSize(width, height);
 
-			m_ViewCenter[1] = 0.0f;//height;
+			m_ViewCenter[1] = height;
 
 			viewTransform[0] = m_CameraScale;
 			viewTransform[3] = m_CameraScale;
