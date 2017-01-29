@@ -1,11 +1,11 @@
-## Nima-Cpp-Testing
+## Nima-Cpp-OpenGL
 Example app using the Nima-Cpp library to get characters on the screen and interact with them.
 
 ## Building
 Currently contains a single Makefile that has been tested on OSX. You'll need glfw3.
 
 ## Usage
-Call make and then run Nima-Testing.
+Call make and then run Nima-OpenGL.
 
 ## Contributing
 1. Fork it!
