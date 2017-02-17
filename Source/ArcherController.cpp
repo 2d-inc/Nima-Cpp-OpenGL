@@ -35,7 +35,7 @@ void ArcherController::onAdded(nima::GameActorInstance* actorInstance)
 
 	if(m_Aim != nullptr)
 	{
-		nima::ActorNode* muzzle = actorInstance->node("Muzzle");
+		nima::ActorNode* muzzle = actorInstance->component<nima::ActorNode*>("Muzzle");
 		if(muzzle != nullptr)
 		{
 			for(int i = 0; i < AimSliceCount; i++)
