@@ -1,4 +1,5 @@
 #include "ArcherController.hpp"
+#include <nima/ActorEvent.hpp>
 #include <cmath>
 
 ArcherController::ArcherController() : 
@@ -10,7 +11,7 @@ ArcherController::ArcherController() :
 	m_AimAnimationTime(0.0f),
 	m_IdleTime(0.0f),
 	m_WalkToIdleTime(0.0f),
-	m_WalkTime(0.0f),
+	//m_WalkTime(0.0f),
 	m_RunTime(0.0f),
 	m_HorizontalSpeed(0.0f),
 	m_IsRunning(false),
@@ -22,14 +23,20 @@ ArcherController::ArcherController() :
 
 ArcherController::~ArcherController()
 {
+	delete m_Walk;
+}
 
+void ArcherController::onAnimationEvent(const nima::ActorAnimationEvent& event, void* userdata)
+{
+	printf("GOT EVENT %s\n", event.actorEvent->name().c_str());
 }
 
 void ArcherController::onAdded(nima::GameActorInstance* actorInstance)
 {
+	actorInstance->eventCallback(ArcherController::onAnimationEvent, this);
 	m_Idle = actorInstance->animation("Idle");
 	m_Aim = actorInstance->animation("Aim2");
-	m_Walk = actorInstance->animation("Walk");
+	m_Walk = actorInstance->animationInstance("Walk");
 	m_Run = actorInstance->animation("Run");
 	m_WalkToIdle = actorInstance->animation("WalkToIdle");
 
@@ -53,7 +60,8 @@ void ArcherController::onAdded(nima::GameActorInstance* actorInstance)
 			if(m_Walk != nullptr)
 			{
 				// Apply first frame of walk to extract the aim while walking lookup.
-				m_Walk->apply(0.0f, actorInstance, 1.0);
+				m_Walk->time(0.0f);
+				m_Walk->apply(1.0);
 				for(int i = 0; i < AimSliceCount; i++)
 				{
 					float position = i / (float)(AimSliceCount-1) * m_Aim->duration();
@@ -167,24 +175,26 @@ void ArcherController::advance(nima::GameActorInstance* actorInstance, float ela
 	{
 		if(m_HorizontalSpeed == 0.0f && m_WalkMix == 0.0f && m_RunMix == 0.0f)
 		{
-			m_WalkTime = 0.0f;
+			m_Walk->time(0.0f);
+			//m_WalkTime = 0.0f;
 			m_RunTime = 0.0f;
 		}
 		else
 		{
-			m_WalkTime = m_WalkTime + elapsedSeconds * 0.9f * (m_HorizontalSpeed > 0 ? 1.0f : -1.0f) * scaleX;
+			//m_WalkTime = m_WalkTime + elapsedSeconds * 0.9f * (m_HorizontalSpeed > 0 ? 1.0f : -1.0f) * scaleX;
 			// Sync up the run and walk times.
-			m_WalkTime = std::fmod(m_WalkTime, m_Walk->duration());
-			if(m_WalkTime < 0.0f)
-			{
-				m_WalkTime += m_Walk->duration();
-			}
-			m_RunTime = m_WalkTime / m_Walk->duration() * m_Run->duration();
+			//m_WalkTime = std::fmod(m_WalkTime, m_Walk->duration());
+			//if(m_WalkTime < 0.0f)
+			//{
+		//		m_WalkTime += m_Walk->duration();
+		//	}
+			m_Walk->advance(elapsedSeconds * 0.9f * (m_HorizontalSpeed > 0 ? 1.0f : -1.0f) * scaleX);
+			m_RunTime = (m_Walk->time() - m_Walk->min()) / m_Walk->max() * m_Run->duration();
 		}
 
 		if(m_WalkMix != 0.0f)
 		{
-			m_Walk->apply(m_WalkTime, actorInstance, m_WalkMix);
+			m_Walk->apply(m_WalkMix);
 		}
 		if(m_RunMix != 0.0f)
 		{

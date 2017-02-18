@@ -2,19 +2,21 @@
 #define _ARCHERCONTROLLER_HPP_
 
 #include "GameActor.hpp"
+#include <nima/Animation/ActorAnimation.hpp>
 
 class ArcherController : public nima::GameActorController
 {
 	private:
 		nima::ActorAnimation* m_Idle;
 		nima::ActorAnimation* m_Aim;
-		nima::ActorAnimation* m_Walk;
+		//nima::ActorAnimation* m_Walk;
+		nima::ActorAnimationInstance* m_Walk;
 		nima::ActorAnimation* m_Run;
 		nima::ActorAnimation* m_WalkToIdle;
 		float m_AimAnimationTime;
 		float m_IdleTime;
 		float m_WalkToIdleTime;
-		float m_WalkTime;
+		//float m_WalkTime;
 		float m_RunTime;
 		float m_HorizontalSpeed;
 		bool m_IsRunning;
@@ -46,6 +48,8 @@ class ArcherController : public nima::GameActorController
 		void moveLeft(bool move);
 		void moveRight(bool move);
 		void run(bool run);
+	private:
+		static void onAnimationEvent(const nima::ActorAnimationEvent& event, void* userdata);
 };
 
 
