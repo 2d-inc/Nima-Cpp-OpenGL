@@ -13,6 +13,7 @@ class ArcherController : public nima::GameActorController
 		nima::ActorAnimationInstance* m_Walk;
 		nima::ActorAnimation* m_Run;
 		nima::ActorAnimation* m_WalkToIdle;
+		nima::CustomFloatProperty* m_GroundSpeedProperty;
 		float m_AimAnimationTime;
 		float m_IdleTime;
 		float m_WalkToIdleTime;

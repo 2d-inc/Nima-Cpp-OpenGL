@@ -1,5 +1,6 @@
 #include "ArcherController.hpp"
 #include <nima/ActorEvent.hpp>
+#include <nima/CustomProperty.hpp>
 #include <cmath>
 
 ArcherController::ArcherController() : 
@@ -8,6 +9,7 @@ ArcherController::ArcherController() :
 	m_Walk(nullptr),
 	m_Run(nullptr),
 	m_WalkToIdle(nullptr),
+	m_GroundSpeedProperty(nullptr),
 	m_AimAnimationTime(0.0f),
 	m_IdleTime(0.0f),
 	m_WalkToIdleTime(0.0f),
@@ -40,9 +42,17 @@ void ArcherController::onAdded(nima::GameActorInstance* actorInstance)
 	m_Run = actorInstance->animation("Run");
 	m_WalkToIdle = actorInstance->animation("WalkToIdle");
 
+	nima::ActorNode* characterNode = actorInstance->component<nima::ActorNode*>("Character");
+	if(characterNode != nullptr)
+	{
+		m_GroundSpeedProperty = characterNode->getCustomFloatProperty("GroundSpeed");
+	}
+
 	if(m_Aim != nullptr)
 	{
 		nima::ActorNode* muzzle = actorInstance->component<nima::ActorNode*>("Muzzle");
+
+		//
 		if(muzzle != nullptr)
 		{
 			for(int i = 0; i < AimSliceCount; i++)
@@ -170,7 +180,13 @@ void ArcherController::advance(nima::GameActorInstance* actorInstance, float ela
 	}
 
 	float moveSpeed = m_IsRunning ? 1100.0f : 600.0f;
-	root->x(root->x() + m_HorizontalSpeed * elapsedSeconds * moveSpeed);
+	float speedModifier = 1.0f;
+	if(m_GroundSpeedProperty != nullptr)
+	{
+		speedModifier = (m_IsRunning ? 1.0f - m_GroundSpeedProperty->value() : m_GroundSpeedProperty->value())*0.5f+0.5f;
+	}
+	
+	root->x(root->x() + m_HorizontalSpeed * elapsedSeconds * moveSpeed * speedModifier);
 	if(m_Walk != nullptr && m_Run != nullptr)
 	{
 		if(m_HorizontalSpeed == 0.0f && m_WalkMix == 0.0f && m_RunMix == 0.0f)

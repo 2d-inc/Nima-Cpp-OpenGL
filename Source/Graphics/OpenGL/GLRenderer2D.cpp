@@ -98,8 +98,11 @@ BlendMode GLRenderer2D::blendMode() const
 
 void GLRenderer2D::setBlendMode(BlendMode mode)
 {
+	if(m_BlendMode == mode)
+	{
+		return;
+	}
 	m_BlendMode = mode;
-	m_BlendMode = BlendMode::Normal;
 	switch (m_BlendMode)
 	{
 		case BlendMode::Off:
