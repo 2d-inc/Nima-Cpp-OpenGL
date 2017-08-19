@@ -55,7 +55,7 @@ namespace nima
 			GameActor();
 			~GameActor();
 			void initializeGraphics(Renderer2D* renderer);
-			GameActorInstance* makeInstance();
+			Actor* makeInstance() const override;
 	};
 
 	class GameActorInstance : public Actor
@@ -63,15 +63,15 @@ namespace nima
 		typedef Actor Base;
 		friend class GameActor;
 		private:
-			GameActorInstance(GameActor* gameActor);
-			GameActor* m_GameActor;
+			GameActorInstance(const GameActor* gameActor);
+			const GameActor* m_GameActor;
 			std::vector<GameActorController*> m_Controllers;
 
 		public:
 			~GameActorInstance();
 			void initializeGraphics(Renderer2D* renderer);
 			void render(Renderer2D* renderer);
-			GameActor* gameActor();
+			const GameActor* gameActor();
 
 			template<class ControllerType, typename... ControllerArguments>
 			ControllerType* addController(ControllerArguments... args)
