@@ -183,49 +183,62 @@ void GameActor::initializeGraphics(Renderer2D* renderer)
 	std::vector<float> skinnedVertexData;
 	std::vector<unsigned short> indexData;
 
-	for(int i = 0; i < m_ImageNodeCount; i++)
+	for(int i = 0; i < m_RenderNodeCount; i++)
 	{
-		GameActorImage* actorImage = reinterpret_cast<GameActorImage*>(m_ImageNodes[i]);
-
-		// When the image has vertex deform we actually get two vertex buffers per image.
-		// One that is static with all our base vertex data in there and one with the override positions.
-		// TODO: optimize this to remove the positions from the base one.
-		if(actorImage->doesAnimationVertexDeform())
+		auto renderNode = m_RenderNodes[i];
+		switch(renderNode->type())
 		{
-			actorImage->m_VertexBuffer = renderer->makeVertexBuffer();
-			actorImage->m_VertexBuffer->setData(actorImage->vertices(), sizeof(float) * actorImage->vertexCount() * actorImage->vertexStride(), BufferHint::Static);
-
-			actorImage->m_IndexOffset = indexData.size();
-			unsigned short* tris = actorImage->triangles();
-			int indexCount = actorImage->triangleCount() * 3;
-			for(int j = 0; j < indexCount; j++)
+			case nima::ComponentType::ActorImage:
 			{
-				indexData.push_back(tris[j]);
+				GameActorImage* actorImage = reinterpret_cast<GameActorImage*>(renderNode);
+
+				// When the image has vertex deform we actually get two vertex buffers per image.
+				// One that is static with all our base vertex data in there and one with the override positions.
+				// TODO: optimize this to remove the positions from the base one.
+				if(actorImage->doesAnimationVertexDeform())
+				{
+					actorImage->m_VertexBuffer = renderer->makeVertexBuffer();
+					actorImage->m_VertexBuffer->setData(actorImage->vertices(), sizeof(float) * actorImage->vertexCount() * actorImage->vertexStride(), BufferHint::Static);
+
+					actorImage->m_IndexOffset = indexData.size();
+					unsigned short* tris = actorImage->triangles();
+					int indexCount = actorImage->triangleCount() * 3;
+					for(int j = 0; j < indexCount; j++)
+					{
+						indexData.push_back(tris[j]);
+					}
+				}
+				else
+				{
+					// N.B. Even vertex deformed buffers get full stride. This wastes a little bit of data as each vertex deformed
+					// mesh will also have their original positions stored on the GPU, but this saves quite a bit of extra branching.
+
+					std::vector<float>& currentVertexData = actorImage->connectedBoneCount() > 0 ? skinnedVertexData : vertexData;
+					
+					// Calculate the offset in our contiguous vertex buffer.
+					unsigned short firstVertexIndex = (unsigned short)(currentVertexData.size()/actorImage->vertexStride());
+					float* vertices = actorImage->vertices();
+					int size = actorImage->vertexCount() * actorImage->vertexStride();
+					for(int j = 0; j < size; j++)
+					{
+						currentVertexData.push_back(vertices[j]);
+					}
+
+					// N.B. There's an implication here that each mesh cannot have more than 65,535 vertices.
+					actorImage->m_IndexOffset = indexData.size();
+					unsigned short* tris = actorImage->triangles();
+					int indexCount = actorImage->triangleCount() * 3;
+					for(int j = 0; j < indexCount; j++)
+					{
+						indexData.push_back(tris[j]+firstVertexIndex);
+					}
+				}
+				break;
 			}
-		}
-		else
-		{
-			// N.B. Even vertex deformed buffers get full stride. This wastes a little bit of data as each vertex deformed
-			// mesh will also have their original positions stored on the GPU, but this saves quite a bit of extra branching.
-
-			std::vector<float>& currentVertexData = actorImage->connectedBoneCount() > 0 ? skinnedVertexData : vertexData;
-			
-			// Calculate the offset in our contiguous vertex buffer.
-			unsigned short firstVertexIndex = (unsigned short)(currentVertexData.size()/actorImage->vertexStride());
-			float* vertices = actorImage->vertices();
-			int size = actorImage->vertexCount() * actorImage->vertexStride();
-			for(int j = 0; j < size; j++)
+			default:
 			{
-				currentVertexData.push_back(vertices[j]);
-			}
-
-			// N.B. There's an implication here that each mesh cannot have more than 65,535 vertices.
-			actorImage->m_IndexOffset = indexData.size();
-			unsigned short* tris = actorImage->triangles();
-			int indexCount = actorImage->triangleCount() * 3;
-			for(int j = 0; j < indexCount; j++)
-			{
-				indexData.push_back(tris[j]+firstVertexIndex);
+				// This example doesn't handle other types yet as they are forthcoming in Nima.
+				break;
 			}
 		}
 	}
@@ -248,32 +261,44 @@ void GameActor::initializeGraphics(Renderer2D* renderer)
 	}
 
 	// Update the vertex buffers being referenced.
-	for(int i = 0; i < m_ImageNodeCount; i++)
+	for(int i = 0; i < m_RenderNodeCount; i++)
 	{
-		GameActorImage* actorImage = reinterpret_cast<GameActorImage*>(m_ImageNodes[i]);
-
-		if(!actorImage->doesAnimationVertexDeform())
+		auto renderNode = m_RenderNodes[i];
+		switch(renderNode->type())
 		{
-			if(actorImage->connectedBoneCount() > 0)
+			case nima::ComponentType::ActorImage:
 			{
-				actorImage->m_VertexBuffer = m_SkinnedVertexBuffer;
+				GameActorImage* actorImage = reinterpret_cast<GameActorImage*>(renderNode);
+
+				if(!actorImage->doesAnimationVertexDeform())
+				{
+					if(actorImage->connectedBoneCount() > 0)
+					{
+						actorImage->m_VertexBuffer = m_SkinnedVertexBuffer;
+					}
+					else
+					{
+						actorImage->m_VertexBuffer = m_VertexBuffer;	
+					}
+				}
+				break;
 			}
-			else
+			default:
 			{
-				actorImage->m_VertexBuffer = m_VertexBuffer;	
+				continue;
 			}
 		}
 	}
 }
 
-GameActorInstance* GameActor::makeInstance()
+Actor* GameActor::makeInstance() const
 {
 	GameActorInstance* instance = new GameActorInstance(this);
 	instance->copy(*this);
 	return instance;
 }
 
-GameActorInstance::GameActorInstance(GameActor* gameActor) :
+GameActorInstance::GameActorInstance(const GameActor* gameActor) :
 	m_GameActor(gameActor)
 {
 
@@ -328,7 +353,7 @@ void GameActorInstance::initializeGraphics(Renderer2D* renderer)
 	}
 }
 
-GameActor* GameActorInstance::gameActor()
+const GameActor* GameActorInstance::gameActor()
 {
 	return m_GameActor;
 }
@@ -341,12 +366,23 @@ void GameActorInstance::updateVertexDeform(ActorImage* image)
 
 void GameActorInstance::render(Renderer2D* renderer)
 {
-	for(int i = 0; i < m_ImageNodeCount; i++)
+	for(int i = 0; i < m_RenderNodeCount; i++)
 	{
-		GameActorImage* actorImage = reinterpret_cast<GameActorImage*>(m_ImageNodes[i]);
-		if(actorImage != nullptr)
+		ActorRenderNode* renderNode = m_RenderNodes[i];
+		switch(renderNode->type())
 		{
-			actorImage->render(this, renderer);
+			case ComponentType::ActorImage:
+			{
+				GameActorImage* actorImage = reinterpret_cast<GameActorImage*>(renderNode);
+				if(actorImage != nullptr)
+				{
+					actorImage->render(this, renderer);
+				}
+				break;
+			}
+			default:
+				// No other types supported in this example yet.
+				break;
 		}
 	}
 }

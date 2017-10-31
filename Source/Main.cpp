@@ -133,7 +133,7 @@ int main(int argc, char** argv)
 
 	actor->initializeGraphics(renderer);
 
-	nima::GameActorInstance* actorInstance = actor->makeInstance();
+	nima::GameActorInstance* actorInstance = actor->instance<nima::GameActorInstance>();
 	actorInstance->initializeGraphics(renderer);
 
 	nima::ActorAnimation* animation = actorInstance->animation("Untitled");
