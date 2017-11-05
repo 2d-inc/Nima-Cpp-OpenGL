@@ -73,7 +73,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 
 int main(int argc, char** argv)
 {
-
 	if (!glfwInit())
 	{
 		return 0;
@@ -115,12 +114,11 @@ int main(int argc, char** argv)
 	// Init renderer.
 	nima::Renderer2D* renderer = new nima::GLRenderer2D();
 
-
 	nima::GameActor* actor = new nima::GameActor();
 
 	try
 	{
-		actor->load("Assets/Archer.nima");
+		actor->load("Assets/SlidingSolo.nima");
 	}
 	catch (nima::OverflowException ex)
 	{
@@ -136,9 +134,9 @@ int main(int argc, char** argv)
 	nima::GameActorInstance* actorInstance = actor->instance<nima::GameActorInstance>();
 	actorInstance->initializeGraphics(renderer);
 
-	nima::ActorAnimation* animation = actorInstance->animation("Untitled");
+	nima::ActorAnimation* animation = actorInstance->animation("Slide");
 	float animationTime = 0.0f;
-	characterController = actorInstance->addController<ArcherController>();
+	// characterController = actorInstance->addController<ArcherController>();
 
 	int width = 0, height = 0;
 	int lastScreenWidth = width, lastScreenHeight = height;
