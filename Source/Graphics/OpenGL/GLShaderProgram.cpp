@@ -1,5 +1,8 @@
 #include "GLShaderProgram.hpp"
 #include "GLVertexBuffer.hpp"
+#ifdef GL_NEEDS_GLAD
+#include <glad/glad.h>
+#endif
 #include <GLFW/glfw3.h>
 
 using namespace nima;

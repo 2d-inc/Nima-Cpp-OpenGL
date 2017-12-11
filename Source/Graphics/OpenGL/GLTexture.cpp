@@ -1,4 +1,7 @@
 #include "GLTexture.hpp"
+#ifdef GL_NEEDS_GLAD
+#include <glad/glad.h>
+#endif
 #include <GLFW/glfw3.h>
 
 using namespace nima;

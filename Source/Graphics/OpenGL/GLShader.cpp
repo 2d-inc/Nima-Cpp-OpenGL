@@ -1,6 +1,10 @@
 #include "GLShader.hpp"
 #include "GLShaderLoadException.hpp"
+#ifdef GL_NEEDS_GLAD
+#include <glad/glad.h>
+#endif
 #include <GLFW/glfw3.h>
+#include <cstring>
 
 using namespace nima;
 
@@ -13,14 +17,14 @@ GLShader::GLShader(const std::string& f)
 	}
 	else
 	{
-		long len = strlen( filename );
+		long len = std::strlen( filename );
 		if ( len < 4 )
 		{
 			throw GLShaderLoadException(f, "Filename is too short");
 		}
 
 		int type;
-		if ( strcmp( filename + len - 3, ".fs" ) == 0 )
+		if ( std::strcmp( filename + len - 3, ".fs" ) == 0 )
 		{
 			type = GL_FRAGMENT_SHADER;
 		}
@@ -84,7 +88,7 @@ GLShader::GLShader(const std::string& f)
 			infobuffer[infobufferlen] = 0;
 			if ( infobufferlen != 0 )
 			{
-				if ( strstr( infobuffer, "error" ) == NULL )
+				if ( std::strstr( infobuffer, "error" ) == NULL )
 				{
 					printf("Shader::Load - warnings from GLSL while compiling '%s'\n", filename);
 					printf("-----------------------------------------------------------------------\n");

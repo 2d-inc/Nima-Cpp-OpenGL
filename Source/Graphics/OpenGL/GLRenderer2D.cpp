@@ -3,6 +3,9 @@
 #include "GLVertexBuffer.hpp"
 #include "GLTexture.hpp"
 #include "../Bitmap/Bitmap.hpp"
+#ifdef GL_NEEDS_GLAD
+#include <glad/glad.h>
+#endif
 #define GLFW_INCLUDE_GLEXT
 #include <GLFW/glfw3.h>
 

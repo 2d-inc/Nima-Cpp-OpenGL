@@ -5,6 +5,7 @@
 #include "Graphics/Bitmap/UnknownBitmapFormatException.hpp"
 #include <nima/Exceptions/MissingFileException.hpp>
 #include <cassert>
+#include <algorithm>
 
 using namespace nima;
 

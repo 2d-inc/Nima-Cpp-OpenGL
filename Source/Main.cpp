@@ -1,3 +1,6 @@
+#ifdef GL_NEEDS_GLAD
+#include <glad/glad.h>
+#endif
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 #include "GameActor.hpp"
@@ -8,7 +11,7 @@
 #include "Graphics/Bitmap/Bitmap.hpp"
 #include "Graphics/OpenGL/GLRenderer2D.hpp"
 #include "ArcherController.hpp"
-
+#include <cmath>
 
 // The input is handled globally in this example for the sake of simplicity and clarity.
 nima::Vec2D screenMouse;
@@ -26,7 +29,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	}
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 	{
-		glfwSetWindowShouldClose(window, GLFW_TRUE);
+		glfwSetWindowShouldClose(window, 1);
 		return;
 	}
 
@@ -108,6 +111,9 @@ int main(int argc, char** argv)
 	glfwSetCharCallback(window, character_callback);
 
 	glfwMakeContextCurrent(window);
+#ifdef GL_NEEDS_GLAD
+	gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
+#endif
 
 	// Enable VSYNC.
 	glfwSwapInterval(1);

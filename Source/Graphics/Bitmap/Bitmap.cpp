@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <nima/Exceptions/MissingFileException.hpp>
 #include <cmath>
+#include <algorithm>
+#include <string> 
 
 using namespace nima;
 
@@ -32,7 +34,7 @@ void Bitmap::load(const std::string& filename, bool flipY)
 
 
 	std::string extension(filename, index);
-	std::transform(extension.begin(), extension.end(), extension.begin(), std::tolower);
+	std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
 	if (extension == ".png")
 	{
 		// handle
