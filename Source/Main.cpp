@@ -63,8 +63,41 @@ static void cursor_position_callback(GLFWwindow* window, double xpos, double ypo
 	screenMouse[1] = (float)ypos;
 }
 
+void take_screenshot(char* filename, FILE* fp)
+{
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+	int nSize = 640*480*3;
+	char* dataBuffer = (char*)malloc(nSize*sizeof(char));
+
+	if(!dataBuffer)
+	{
+		printf("NO MORE MEMORY!\n");
+		return;
+	}
+
+	glReadPixels((GLint)0, (GLint)0, (GLint)640, (GLint)480, GL_BGR, GL_UNSIGNED_BYTE, dataBuffer);
+
+	unsigned char TGAheader[12] = { 0,0,2,0,0,0,0,0,0,0,0,0 };
+	unsigned char header[6] = { 640%256, 640/256, 480%256, 480/256, 24, 0 };
+
+	fwrite(TGAheader, sizeof(unsigned char), 12, fp);
+	fwrite(header, sizeof(unsigned char), 6, fp);
+	fwrite(dataBuffer, sizeof(GLubyte), nSize, fp);
+
+	free(dataBuffer);
+}
+
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
+	FILE* filePtr = fopen("Screenshot.tga", "wb");
+	if(!filePtr)
+	{
+		printf("CANNOT OPEN FILE!\n");
+		return;
+	}
+	take_screenshot("bla", filePtr);
+	fclose(filePtr);
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
@@ -76,6 +109,13 @@ int main(int argc, char** argv)
 	if (!glfwInit())
 	{
 		return 0;
+	}
+
+	float screenshotTime = 0.16f; // Give it time to at least render the first frame
+
+	if(argc >= 2)
+	{
+		screenshotTime = std::max(0.16, atof(argv[1]));
 	}
 
 	glfwSetErrorCallback(error_callback);
@@ -172,6 +212,21 @@ int main(int argc, char** argv)
 		if(animation != nullptr)
 		{
 			animationTime = std::fmod(animationTime + elapsed, animation->duration());
+			if(animationTime >= screenshotTime)
+			{
+				FILE* filePtr = fopen("screenshot.tga", "wb");
+				if(!filePtr)
+				{
+					printf("CANNOT OPEN SCREENSHOT FILE!\n");
+					return -1;
+				}
+				else
+				{
+					take_screenshot("bla", filePtr);
+					return 0;
+					fclose(filePtr);			
+				}
+			}
 			animation->apply(animationTime, actorInstance, 1.0f);
 		}
 
