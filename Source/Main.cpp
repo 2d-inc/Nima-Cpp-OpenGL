@@ -1,4 +1,6 @@
+#define GLFW_INCLUDE_GLEXT
 #include <GLFW/glfw3.h>
+#include <unistd.h>
 #include <stdio.h>
 #include "GameActor.hpp"
 #include <nima/Animation/ActorAnimation.hpp>
@@ -8,11 +10,19 @@
 #include "Graphics/Bitmap/Bitmap.hpp"
 #include "Graphics/OpenGL/GLRenderer2D.hpp"
 #include "ArcherController.hpp"
+#include "TGAWriter.hpp"
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/prettywriter.h>
+#include <rapidjson/stringbuffer.h>
 
 
 // The input is handled globally in this example for the sake of simplicity and clarity.
 nima::Vec2D screenMouse;
 ArcherController* characterController = nullptr;
+int wHeight = 303;
+int wWidth = 540;
+
 void error_callback(int error, const char* description)
 {
 	puts(description);
@@ -63,41 +73,64 @@ static void cursor_position_callback(GLFWwindow* window, double xpos, double ypo
 	screenMouse[1] = (float)ypos;
 }
 
-void take_screenshot(char* filename, FILE* fp)
+void take_screenshot(const char* filename, int w, int h)
 {
-	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-
-	int nSize = 640*480*3;
-	char* dataBuffer = (char*)malloc(nSize*sizeof(char));
+	FILE *fp = fopen(filename, "wb");
+	if(!fp)
+	{
+		printf("THERE WAS AN ERROR CREATING THE FILE:%s\n", filename);
+		return;
+	}	
+	
+	int nSize = w*h*3;
+	char* dataBuffer = (char*)malloc(nSize);
 
 	if(!dataBuffer)
 	{
 		printf("NO MORE MEMORY!\n");
+		fclose(fp);
 		return;
-	}
 
-	glReadPixels((GLint)0, (GLint)0, (GLint)640, (GLint)480, GL_BGR, GL_UNSIGNED_BYTE, dataBuffer);
+	}
+	GLuint fbo;
+	GLuint renderBuf;
+	glGenFramebuffers(1, &fbo);
+	glGenRenderbuffers(1, &renderBuf);
+	glBindRenderbuffer(GL_RENDERBUFFER, renderBuf);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_BGR, w, h);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, renderBuf);
+
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+	glReadPixels((GLint)0, (GLint)0, (GLint)w, (GLint)h, GL_BGR, GL_UNSIGNED_BYTE, dataBuffer);
 
 	unsigned char TGAheader[12] = { 0,0,2,0,0,0,0,0,0,0,0,0 };
-	unsigned char header[6] = { 640%256, 640/256, 480%256, 480/256, 24, 0 };
+	unsigned char v0 = static_cast<unsigned char>(w%256);
+	unsigned char v1 = static_cast<unsigned char>(w/256);
+	unsigned char v2 = static_cast<unsigned char>(h%256);
+	unsigned char v3 = static_cast<unsigned char>(h/256);
+	unsigned char header[6] = 
+	{
+		v0, v1, v2, v3, 24, 0 
+	};
 
 	fwrite(TGAheader, sizeof(unsigned char), 12, fp);
 	fwrite(header, sizeof(unsigned char), 6, fp);
 	fwrite(dataBuffer, sizeof(GLubyte), nSize, fp);
 
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // Return to onscreen rendering
+	glDeleteFramebuffers(1, &fbo);
+	glDeleteRenderbuffers(1, &renderBuf);
+
 	free(dataBuffer);
+	fclose(fp);
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
-	FILE* filePtr = fopen("Screenshot.tga", "wb");
-	if(!filePtr)
-	{
-		printf("CANNOT OPEN FILE!\n");
-		return;
-	}
-	take_screenshot("bla", filePtr);
-	fclose(filePtr);
+	const char *cname = "click";
+	take_screenshot(cname, wWidth, wHeight);
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
@@ -111,27 +144,48 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	float screenshotTime = 0.16f; // Give it time to at least render the first frame
+// TODO reopen when Piping the JSON through stdin 
+	// char ch;
+	// while(read(STDIN_FILENO, &ch, 1) > 0)
+	// {
+	// 	printf("%c", ch);
+	// }
 
-	if(argc >= 2)
-	{
-		screenshotTime = std::max(0.16, atof(argv[1]));
-	}
+	const char *json = "{\"file_id\":\"shot-166-dev\",\"animations\":[1,2,3],\"export_type\":\"screenshot\",\"width\":300,\"height\":300,\"aspect_ratio\":1,\"frame_start\":15,\"frame_end\":30,\"fps\":30,\"camera_panning\":{\"x\":0,\"y\":0},\"zoom\":50}";
+	rapidjson::Document d;
+	d.Parse(json);
+
+	// PrettyPrint parsed result
+	rapidjson::StringBuffer sb;
+	rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(sb);
+	d.Accept(writer);
+	printf("JUST GOT:\n%s\n", sb.GetString());
+	
+	nima::TGAWriter* photographer = new nima::TGAWriter(d);
 
 	glfwSetErrorCallback(error_callback);
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-	int initialWindowWidth = 640;
-	int initialWindowHeight = 480;
-
-	nima::Vec2D m_ViewCenter(0.0f, 0.0f);
+	nima::Vec2D m_ViewCenter(3.0f, 30.0f);
 	float m_CameraScale = 0.3f;
 	nima::Mat2D viewTransform;
 	nima::Mat2D inverseViewTransform;
 
-	GLFWwindow* window = glfwCreateWindow(initialWindowWidth, initialWindowHeight, "Nima", NULL, NULL);
+	if (d.HasMember("width") && d["width"].IsInt())
+	{
+		wWidth = d["width"].GetInt();
+		printf("GOT WIDTH:%d\n", wWidth);
+	}
+
+	if (d.HasMember("height") && d["height"].IsInt())
+	{
+		wHeight = d["height"].GetInt();
+		printf("GOT HEIGHT:%d\n", wHeight);
+	}
+
+	GLFWwindow* window = glfwCreateWindow(wWidth, wHeight, "Nima", NULL, NULL);
 	if (!window)
 	{
 		// Window or OpenGL context creation failed
@@ -159,6 +213,7 @@ int main(int argc, char** argv)
 	try
 	{
 		actor->load("Assets/SlidingSolo.nima");
+		// actor->load(fileName);
 	}
 	catch (nima::OverflowException ex)
 	{
@@ -175,8 +230,29 @@ int main(int argc, char** argv)
 	actorInstance->initializeGraphics(renderer);
 
 	nima::ActorAnimation* animation = actorInstance->animation("Slide");
+	
+	if(d.HasMember("fps") && d["fps"].IsInt())
+	{
+		int configFps = d["fps"].GetInt();
+		animation->fps(configFps);
+		printf("ANIMATION FRAMES:%d\n", animation->fps());
+	}
 	float animationTime = 0.0f;
-	// characterController = actorInstance->addController<ArcherController>();
+	if(d.HasMember("frame_start") && d["frame_start"].IsInt())
+	{
+		int fs = d["frame_start"].GetInt();
+		animationTime = (float)fs / (float)animation->fps();
+		printf("ANIMATION WILL START FROM:%f\n", animationTime);
+	}
+
+	if(d.HasMember("frame_end") && d["frame_end"].IsInt())
+	{
+		float dur = d["frame_end"].GetInt() / animation->fps();
+		animation->duration(dur);
+		printf("ANIMATION WILL END AT :%f\n", dur);
+	}
+
+	int imgSeqIndex = 0;
 
 	int width = 0, height = 0;
 	int lastScreenWidth = width, lastScreenHeight = height;
@@ -196,7 +272,7 @@ int main(int argc, char** argv)
 			viewTransform[0] = m_CameraScale;
 			viewTransform[3] = m_CameraScale;
 			viewTransform[4] = (-m_ViewCenter[0] * m_CameraScale + width/2.0f);
-			viewTransform[5] = (-m_ViewCenter[1] * m_CameraScale + height/2.0f);
+			viewTransform[5] = 230;//(-m_ViewCenter[1] * m_CameraScale + height/2.0f);
 			renderer->setView(viewTransform);
 
 			nima::Mat2D::invert(inverseViewTransform, viewTransform);
@@ -211,33 +287,24 @@ int main(int argc, char** argv)
 
 		if(animation != nullptr)
 		{
-			animationTime = std::fmod(animationTime + elapsed, animation->duration());
-			if(animationTime >= screenshotTime)
+			if(animationTime + elapsed > animation->duration())
 			{
-				FILE* filePtr = fopen("screenshot.tga", "wb");
-				if(!filePtr)
-				{
-					printf("CANNOT OPEN SCREENSHOT FILE!\n");
-					return -1;
-				}
-				else
-				{
-					take_screenshot("bla", filePtr);
-					return 0;
-					fclose(filePtr);			
-				}
+				glfwSetWindowShouldClose(window, GLFW_TRUE);
+				break;
 			}
+			animationTime = std::fmod(animationTime + elapsed, animation->duration());
 			animation->apply(animationTime, actorInstance, 1.0f);
-		}
 
-		if(characterController != nullptr)
-		{
-			characterController->setAimTarget(worldMouse);
-		}
-		actorInstance->advance(elapsed);
+			actorInstance->advance(elapsed);
+			renderer->clear();
+			actorInstance->render(renderer);
 
-		renderer->clear();
-		actorInstance->render(renderer);
+			char fname[1024];
+			snprintf(fname, sizeof(fname), "screenshot%d.tga", imgSeqIndex++);
+			// printf("GOING FOR SCREENSHOT:%s\n", fname);
+			photographer->screenshot(fname);
+			// take_screenshot(fname, wWidth, wHeight);
+		}
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -247,6 +314,7 @@ int main(int argc, char** argv)
 	delete actorInstance;
 	delete actor;
 	delete renderer;
+	delete photographer;
 
 	glfwDestroyWindow(window);
 

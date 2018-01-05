@@ -10,7 +10,7 @@ OBJ_DIR			= $(BUILD_DIR)/obj
 CPP_SOURCES		= $(call rwildcard,Source/,*.cpp)
 CPP_OBJECTS		= $(CPP_SOURCES:%.cpp=$(OBJ_DIR)/%.o)
 CPP_FOLDERS		= $(sort $(dir $(CPP_OBJECTS)))
-CPP_INCLUDES	= -INima-Cpp/Build/include -INima-Cpp/Nima-Math-Cpp/Build/include -I/usr/local/include 
+CPP_INCLUDES	= -INima-Cpp/Build/include -INima-Cpp/Nima-Math-Cpp/Build/include -I/usr/local/include -I./extensions
 LFLAGS			= -Wl,-rpath,./ -LNima-Cpp/Build/lib -LNima-Cpp/Nima-Math-Cpp/Build/lib -L/usr/local/lib
 LIBS			= -lnima -lnima-math -lglfw3 -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo -lpng
 
