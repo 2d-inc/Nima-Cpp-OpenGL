@@ -19,76 +19,51 @@ GLRenderer2D::GLRenderer2D() :
 	m_ViewportHeight(0),
 	m_ProjectionMatrix{0},
 	m_ViewMatrix{1.0f, 0.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f, 0.0f,  0.0f, 0.0f, 1.0f, 0.0f,  0.0f, 0.0f, 0.0f, 1.0f },
-	m_TransformMatrix{1.0f, 0.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f, 0.0f,  0.0f, 0.0f, 1.0f, 0.0f,  0.0f, 0.0f, 0.0f, 1.0f }
+	m_TransformMatrix{1.0f, 0.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f, 0.0f,  0.0f, 0.0f, 1.0f, 0.0f,  0.0f, 0.0f, 0.0f, 1.0f },
+	m_ViewDirty(false),
+	m_Color{},
+	m_LastTexture(nullptr),
+	m_LastBaseBuffer(nullptr),
+	m_LastPositionBuffer(nullptr),
+	m_LastUVBuffer(nullptr),
+	m_LastUVOffset(0),
+	m_LastShader(nullptr)
 {
+	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &m_MaxAttributes);
+	m_WantedAttributes = new unsigned char[m_MaxAttributes];
+	m_EnabledAttributes = new unsigned char[m_MaxAttributes];
+	
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 	glFrontFace(GL_CCW);
 	glDisable(GL_BLEND);
 
-	m_TexturedShader.load(m_Shaders, "Assets/Shaders/Textured.vs", "Assets/Shaders/Textured.fs",
+	m_RegularShader.load(m_Shaders, "Assets/Shaders/Regular.vs", "Assets/Shaders/Textured.fs",
 	{
-		GLShaderAttribute("VertexPosition", 2, 4, 0),
-		GLShaderAttribute("VertexTexCoord", 2, 4, 2)
+		GLShaderAttribute("VertexPosition"),
+		GLShaderAttribute("VertexTexCoord")
 	},
 	{
 		GLShaderUniform("ProjectionMatrix"),
 		GLShaderUniform("ViewMatrix"),
 		GLShaderUniform("WorldMatrix"),
 		GLShaderUniform("TextureSampler"),
-		GLShaderUniform("Opacity"),
 		GLShaderUniform("Color")
 	});
 
-	m_DeformedTexturedShader.load(m_Shaders, "Assets/Shaders/Textured.vs", "Assets/Shaders/Textured.fs",
+	m_DeformingShader.load(m_Shaders, "Assets/Shaders/Deforming.vs", "Assets/Shaders/Textured.fs",
 	{
-		GLShaderAttribute("VertexPosition", 2, 2, 0)
-	},
-	{
-		GLShaderAttribute("VertexTexCoord", 2, 4, 2)
-	},
-	{
-		GLShaderUniform("ProjectionMatrix"),
-		GLShaderUniform("ViewMatrix"),
-		GLShaderUniform("WorldMatrix"),
-		GLShaderUniform("TextureSampler"),
-		GLShaderUniform("Opacity"),
-		GLShaderUniform("Color")
-	});
-
-	m_TexturedSkinShader.load(m_Shaders, "Assets/Shaders/TexturedSkin.vs", "Assets/Shaders/Textured.fs",
-	{
-		GLShaderAttribute("VertexPosition", 2, 12, 0),
-		GLShaderAttribute("VertexTexCoord", 2, 12, 2),
-		GLShaderAttribute("VertexBoneIndices", 4, 12, 4),
-		GLShaderAttribute("VertexWeights", 4, 12, 8)
+		GLShaderAttribute("VertexPosition"),
+		GLShaderAttribute("VertexTexCoord"),
+		GLShaderAttribute("VertexBoneIndices"),
+		GLShaderAttribute("VertexWeights"),
 	},
 	{
 		GLShaderUniform("ProjectionMatrix"),
 		GLShaderUniform("ViewMatrix"),
 		GLShaderUniform("WorldMatrix"),
 		GLShaderUniform("TextureSampler"),
-		GLShaderUniform("Opacity"),
-		GLShaderUniform("Color"),
-		GLShaderUniform("BoneMatrices")
-	});
-
-	m_DeformedTexturedSkinShader.load(m_Shaders, "Assets/Shaders/TexturedSkin.vs", "Assets/Shaders/Textured.fs",
-	{
-		GLShaderAttribute("VertexPosition", 2, 2, 0),
-	},
-	{
-		GLShaderAttribute("VertexTexCoord", 2, 12, 2),
-		GLShaderAttribute("VertexBoneIndices", 4, 12, 4),
-		GLShaderAttribute("VertexWeights", 4, 12, 8)
-	},
-	{
-		GLShaderUniform("ProjectionMatrix"),
-		GLShaderUniform("ViewMatrix"),
-		GLShaderUniform("WorldMatrix"),
-		GLShaderUniform("TextureSampler"),
-		GLShaderUniform("Opacity"),
 		GLShaderUniform("Color"),
 		GLShaderUniform("BoneMatrices")
 	});
@@ -171,175 +146,28 @@ void GLRenderer2D::setViewportSize(int width, int height)
 void GLRenderer2D::clear()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
-	unbind();
+	// unbind();
 }
 
 void GLRenderer2D::setView(const Mat2D& view)
 {
+	if( m_ViewMatrix[0] != view[0] &&
+		m_ViewMatrix[1] != view[1] &&
+		m_ViewMatrix[4] != view[2] &&
+		m_ViewMatrix[5] != view[3] &&
+		m_ViewMatrix[12] != view[4] &&
+		m_ViewMatrix[13] != view[5] )
+	{
+		return;
+	}
+
+	m_ViewDirty = true;
 	m_ViewMatrix[0] = view[0];
 	m_ViewMatrix[1] = view[1];
 	m_ViewMatrix[4] = view[2];
 	m_ViewMatrix[5] = view[3];
 	m_ViewMatrix[12] = view[4];
 	m_ViewMatrix[13] = view[5];
-}
-
-void GLRenderer2D::drawTextured(const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture)
-{
-	m_TransformMatrix[0] = transform[0];
-	m_TransformMatrix[1] = transform[1];
-	m_TransformMatrix[4] = transform[2];
-	m_TransformMatrix[5] = transform[3];
-	m_TransformMatrix[12] = transform[4];
-	m_TransformMatrix[13] = transform[5];
-
-	if (bind(&m_TexturedShader, vertexBuffer))
-	{
-		// This value never changes.
-		glUniform1i(m_TexturedShader.uniform(3), 0);
-
-		// View and projection transform shouldn't change between re-bind calls.
-		glUniformMatrix4fv(m_TexturedShader.uniform(0), 1, GL_FALSE, m_ProjectionMatrix);
-		glUniformMatrix4fv(m_TexturedShader.uniform(1), 1, GL_FALSE, m_ViewMatrix);
-	}
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, reinterpret_cast<const GLTexture*>(texture)->id());
-
-	glUniformMatrix4fv(m_TexturedShader.uniform(2), 1, GL_FALSE, m_TransformMatrix);
-	glUniform1f(m_TexturedShader.uniform(4), opacity);
-	glUniform4fv(m_TexturedShader.uniform(5), 1, color.values());
-
-	const GLIndexBuffer* glIndexBuffer = reinterpret_cast<const GLIndexBuffer*>(indexBuffer);
-	glIndexBuffer->bind();
-	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, BUFFER_OFFSET(sizeof(unsigned short)*offset));
-
-	/*int[] u = m_TexturedShader.Uniforms;
-	GL.UniformMatrix4(u[0], true, ref m_Projection);
-	GL.UniformMatrix4(u[1], true, ref m_ViewTransform);
-	GL.UniformMatrix4(u[2], true, ref m_Transform);
-	//GL.UniformMatrix4(u[2], 1, false, xform);
-
-	GL.ActiveTexture(TextureUnit.Texture0);
-	GL.BindTexture(TextureTarget.Texture2D, texture.Id);
-	GL.Uniform1(u[3], 0);
-
-	GL.Uniform1(u[4], opacity);
-	GL.Uniform4(u[5], color);
-
-	GL.BindBuffer(BufferTarget.ElementArrayBuffer, indexBuffer.Id);
-	GL.DrawElements(BeginMode.Triangles, indexBuffer.Size, DrawElementsType.UnsignedShort, 0);*/
-}
-
-void GLRenderer2D::drawTexturedAndDeformed(const Mat2D& transform, const GraphicsBuffer* deformBuffer, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture)
-{
-	m_TransformMatrix[0] = transform[0];
-	m_TransformMatrix[1] = transform[1];
-	m_TransformMatrix[4] = transform[2];
-	m_TransformMatrix[5] = transform[3];
-	m_TransformMatrix[12] = transform[4];
-	m_TransformMatrix[13] = transform[5];
-
-	if (bind(&m_DeformedTexturedShader, deformBuffer, vertexBuffer))
-	{
-		// This value never changes.
-		glUniform1i(m_DeformedTexturedShader.uniform(3), 0);
-		glUniformMatrix4fv(m_DeformedTexturedShader.uniform(1), 1, GL_FALSE, m_ViewMatrix);
-		glUniformMatrix4fv(m_DeformedTexturedShader.uniform(2), 1, GL_FALSE, m_TransformMatrix);
-	}
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, reinterpret_cast<const GLTexture*>(texture)->id());
-
-	glUniformMatrix4fv(m_DeformedTexturedShader.uniform(0), 1, GL_FALSE, m_ProjectionMatrix);
-	glUniform1f(m_DeformedTexturedShader.uniform(4), opacity);
-	glUniform4fv(m_DeformedTexturedShader.uniform(5), 1, color.values());
-
-	const GLIndexBuffer* glIndexBuffer = reinterpret_cast<const GLIndexBuffer*>(indexBuffer);
-	glIndexBuffer->bind();
-	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, BUFFER_OFFSET(sizeof(unsigned short)*offset));
-
-	/*int[] u = m_TexturedShader.Uniforms;
-	GL.UniformMatrix4(u[0], true, ref m_Projection);
-	GL.UniformMatrix4(u[1], true, ref m_ViewTransform);
-	GL.UniformMatrix4(u[2], true, ref m_Transform);
-	//GL.UniformMatrix4(u[2], 1, false, xform);
-
-	GL.ActiveTexture(TextureUnit.Texture0);
-	GL.BindTexture(TextureTarget.Texture2D, texture.Id);
-	GL.Uniform1(u[3], 0);
-
-	GL.Uniform1(u[4], opacity);
-	GL.Uniform4(u[5], color);
-
-	GL.BindBuffer(BufferTarget.ElementArrayBuffer, indexBuffer.Id);
-	GL.DrawElements(BeginMode.Triangles, indexBuffer.Size, DrawElementsType.UnsignedShort, 0);*/
-}
-
-void GLRenderer2D::drawTexturedSkin(const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float* boneMatrices, int boneMatricesLength, float opacity, const Color& color, const Texture* texture)
-{
-	m_TransformMatrix[0] = transform[0];
-	m_TransformMatrix[1] = transform[1];
-	m_TransformMatrix[4] = transform[2];
-	m_TransformMatrix[5] = transform[3];
-	m_TransformMatrix[12] = transform[4];
-	m_TransformMatrix[13] = transform[5];
-
-	if (bind(&m_TexturedSkinShader, vertexBuffer))
-	{
-		// This value never changes.
-		glUniform1i(m_TexturedSkinShader.uniform(3), 0);
-
-		// View and projection transform shouldn't change between re-bind calls.
-		glUniformMatrix4fv(m_TexturedSkinShader.uniform(0), 1, GL_FALSE, m_ProjectionMatrix);
-		glUniformMatrix4fv(m_TexturedSkinShader.uniform(1), 1, GL_FALSE, m_ViewMatrix);
-	}
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, reinterpret_cast<const GLTexture*>(texture)->id());
-
-	glUniformMatrix4fv(m_TexturedSkinShader.uniform(2), 1, GL_FALSE, m_TransformMatrix);
-	glUniform1f(m_TexturedSkinShader.uniform(4), opacity);
-	glUniform4fv(m_TexturedSkinShader.uniform(5), 1, color.values());
-	glUniform3fv(m_TexturedSkinShader.uniform(6), boneMatricesLength / 3, boneMatrices);
-	//GL.Uniform3(u[6], boneMatrices.Length, boneMatrices);
-
-	const GLIndexBuffer* glIndexBuffer = reinterpret_cast<const GLIndexBuffer*>(indexBuffer);
-	glIndexBuffer->bind();
-	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, BUFFER_OFFSET(sizeof(unsigned short)*offset));
-}
-
-void GLRenderer2D::drawTexturedAndDeformedSkin(const Mat2D& transform, const GraphicsBuffer* deformBuffer, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float* boneMatrices, int boneMatricesLength, float opacity, const Color& color, const Texture* texture)
-{
-	m_TransformMatrix[0] = transform[0];
-	m_TransformMatrix[1] = transform[1];
-	m_TransformMatrix[4] = transform[2];
-	m_TransformMatrix[5] = transform[3];
-	m_TransformMatrix[12] = transform[4];
-	m_TransformMatrix[13] = transform[5];
-
-	if (bind(&m_DeformedTexturedSkinShader, deformBuffer, vertexBuffer))
-	{
-		// This value never changes.
-		glUniform1i(m_DeformedTexturedSkinShader.uniform(3), 0);
-
-		// View and projection transform shouldn't change between re-bind calls.
-		glUniformMatrix4fv(m_DeformedTexturedSkinShader.uniform(0), 1, GL_FALSE, m_ProjectionMatrix);
-		glUniformMatrix4fv(m_DeformedTexturedSkinShader.uniform(1), 1, GL_FALSE, m_ViewMatrix);
-	}
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, reinterpret_cast<const GLTexture*>(texture)->id());
-
-	glUniformMatrix4fv(m_DeformedTexturedSkinShader.uniform(2), 1, GL_FALSE, m_TransformMatrix);
-	glUniform1f(m_DeformedTexturedSkinShader.uniform(4), opacity);
-	glUniform4fv(m_DeformedTexturedSkinShader.uniform(5), 1, color.values());
-	glUniform3fv(m_DeformedTexturedSkinShader.uniform(6), boneMatricesLength / 3, boneMatrices);
-	//GL.Uniform3(u[6], boneMatrices.Length, boneMatrices);
-
-	const GLIndexBuffer* glIndexBuffer = reinterpret_cast<const GLIndexBuffer*>(indexBuffer);
-	glIndexBuffer->bind();
-	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, BUFFER_OFFSET(sizeof(unsigned short)*offset));
 }
 
 Texture* GLRenderer2D::makeTexture(const std::string& filename, int flags)
@@ -413,4 +241,168 @@ GraphicsBuffer* GLRenderer2D::makeVertexBuffer()
 GraphicsBuffer* GLRenderer2D::makeIndexBuffer()
 {
 	return new GLIndexBuffer();
+}
+
+void GLRenderer2D::prep(Texture* texture, const Color &color, float opacity, const Mat2D& transform, GraphicsBuffer* vertexBuffer, const float* boneMatrices, int boneMatricesLength, GraphicsBuffer* deformBuffer, GraphicsBuffer* sequenceUVBuffer, int uvOffset)
+{
+	GLShaderProgram* shader = boneMatricesLength > 0 ? &m_DeformingShader : &m_RegularShader;
+	bool changedShader = false;
+	if(shader != m_LastShader)
+	{
+		changedShader = true;
+		shader->use();
+		m_LastShader = shader;
+	}
+
+	if(changedShader || m_LastBaseBuffer != vertexBuffer || m_LastPositionBuffer != deformBuffer || m_LastUVBuffer != sequenceUVBuffer)
+	{
+		m_LastBaseBuffer = vertexBuffer;
+		m_LastPositionBuffer = deformBuffer;
+		m_LastUVBuffer = sequenceUVBuffer;
+		m_LastUVOffset = uvOffset;
+
+		// We use the base buffer if:
+		//	* We're deforming with bones
+		// 		- base buffer contains the Bone Indices and Weights so it's necessary no matter what
+		// 	* There's no custom position buffer
+		//		- means we're not doing an animated vertex deform (user manually moved vertices).
+		// 	* There's no custom uv buffer
+		// 		- means we're not animating texture coordinates (usually done by the image sequencer)
+		bool useBaseBuffer = boneMatricesLength > 0 || deformBuffer == nullptr || sequenceUVBuffer == nullptr;
+		if(useBaseBuffer)
+		{
+			reinterpret_cast<const GLVertexBuffer*>(vertexBuffer)->bind();
+			int bufferStride = boneMatricesLength > 0 ? 48 : 16;
+			if(deformBuffer == nullptr)
+			{
+				// position comes from base buffer.
+				GLShaderAttribute vertexAttribute = shader->attribute(0); // VertexPosition
+				int index = vertexAttribute.position();
+				enableAttribute(index);
+				glVertexAttribPointer(index, 2, GL_FLOAT, false, bufferStride, 0);
+			}
+			if(sequenceUVBuffer == nullptr)
+			{
+				// uv comes from base buffer.
+				GLShaderAttribute attr = shader->attribute(1); // VertexTexCoord
+				int index = attr.position();
+				enableAttribute(index);
+				glVertexAttribPointer(index, 2, GL_FLOAT, false, bufferStride, BUFFER_OFFSET(8));
+			}
+			if(boneMatricesLength > 0)
+			{
+				GLShaderAttribute boneAttr = shader->attribute(2); // VertexBoneIndices
+				int index = boneAttr.position();
+				enableAttribute(index);
+				glVertexAttribPointer(index, 4, GL_FLOAT, false, 48, BUFFER_OFFSET(16));
+
+				GLShaderAttribute weightsAttr = shader->attribute(3); // VertexWeights
+				index = weightsAttr.position();
+				enableAttribute(index);
+				glVertexAttribPointer(index, 4, GL_FLOAT, false, 48, BUFFER_OFFSET(32));
+			}
+		}
+
+		if(deformBuffer != nullptr)
+		{
+			// Using a custom position buffer.
+			reinterpret_cast<const GLVertexBuffer*>(deformBuffer)->bind();
+			GLShaderAttribute attr = shader->attribute(0); // VertexPosition
+			int index = attr.position();
+			enableAttribute(index);
+			glVertexAttribPointer(index, 2, GL_FLOAT, false, 8, 0);
+		}
+		if(sequenceUVBuffer != nullptr)
+		{
+			// Using a custom uv buffer.
+			reinterpret_cast<const GLVertexBuffer*>(sequenceUVBuffer)->bind();
+			GLShaderAttribute attr = shader->attribute(1); // VertexTexCoord
+			int index = attr.position();
+			enableAttribute(index);
+			glVertexAttribPointer(index, 2, GL_FLOAT, false, 8, BUFFER_OFFSET(uvOffset));
+		}
+
+		// Disable unwanted attributes.
+		for(int i = 0; i < m_MaxAttributes; i++)
+		{
+			if(m_WantedAttributes[i] != m_EnabledAttributes[i])
+			{
+				disableAttribute(i);
+				m_EnabledAttributes[i] = 0;
+			}
+			m_WantedAttributes[i] = 0;
+		}
+	}
+	else if (sequenceUVBuffer != nullptr && m_LastUVOffset != uvOffset)
+	{
+		m_LastUVOffset = uvOffset;
+		reinterpret_cast<const GLVertexBuffer*>(sequenceUVBuffer)->bind();
+		GLShaderAttribute attr = shader->attribute(1); // VertexTexCoord
+		glVertexAttribPointer(attr.position(), 2, GL_FLOAT, false, 8, BUFFER_OFFSET(uvOffset));
+	}
+
+	if(changedShader || m_ViewDirty)
+	{
+		glUniformMatrix4fv(shader->uniform(0) /* ProjectionMatrix */, 1, GL_FALSE, m_ProjectionMatrix);
+		glUniformMatrix4fv(shader->uniform(1) /* ViewMatrix */, 1, GL_FALSE, m_ViewMatrix);
+		m_ViewDirty = false;
+	}
+
+	m_Color.red(color[0] * opacity);
+	m_Color.green(color[1] * opacity);
+	m_Color.blue(color[2] * opacity);
+	m_Color.alpha(color[3] * opacity);
+	glUniform4fv(shader->uniform(4) /* Color */, 1, m_Color.values());
+
+	m_TransformMatrix[0] = transform[0];
+	m_TransformMatrix[1] = transform[1];
+	m_TransformMatrix[4] = transform[2];
+	m_TransformMatrix[5] = transform[3];
+	m_TransformMatrix[12] = transform[4];
+	m_TransformMatrix[13] = transform[5];
+	glUniformMatrix4fv(shader->uniform(2) /* WorldMatrix */, 1, GL_FALSE, m_TransformMatrix);
+
+	if(boneMatricesLength > 0)
+	{
+		glUniform3fv(shader->uniform(5) /* BoneMatrices */, boneMatricesLength / 3, boneMatrices);
+	}
+	if(m_LastTexture != texture)
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, reinterpret_cast<const GLTexture *>(texture)->id());
+		m_LastTexture = texture;
+	}
+
+}
+
+void GLRenderer2D::draw(const GraphicsBuffer *indexBuffer, int indexCount)
+{
+	const GLIndexBuffer* glIndexBuffer = reinterpret_cast<const GLIndexBuffer *>(indexBuffer);
+	GLint boundBufferId = 0;
+	glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &boundBufferId);
+
+	if(boundBufferId != glIndexBuffer->id())
+	{
+		glIndexBuffer->bind();
+	}
+	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, 0);
+}
+
+void GLRenderer2D::enableAttribute(int index)
+{
+	m_WantedAttributes[index] = 1;
+	if(m_EnabledAttributes[index] == 0)
+	{
+		m_EnabledAttributes[index] = 1;
+		glEnableVertexAttribArray(index);
+	}
+}
+
+void GLRenderer2D::disableAttribute(int index)
+{
+	if(m_EnabledAttributes[index] != 0)
+	{
+		m_EnabledAttributes[index] = 0;
+		glDisableVertexAttribArray(index);
+	}
 }

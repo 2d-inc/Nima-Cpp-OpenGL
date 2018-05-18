@@ -47,6 +47,7 @@ namespace nima
 			GraphicsBuffer* m_VertexBuffer;
 			GraphicsBuffer* m_SkinnedVertexBuffer;
 			GraphicsBuffer* m_IndexBuffer;
+			GraphicsBuffer* m_SequenceUVBuffer;
 
 		protected:
 			ActorImage* makeImageNode() override;
