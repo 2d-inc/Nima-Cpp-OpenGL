@@ -40,7 +40,7 @@ static Color WhiteColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 void GameActorImage::render(GameActorInstance* gameActorInstance, Renderer2D* renderer)
 {
-	if(textureIndex() < 0 || renderOpacity() <= 0.0f)
+	if(textureIndex() < 0 || renderOpacity() <= 0.0f || renderCollapsed())
 	{
 		return;
 	}
