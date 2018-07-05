@@ -46,10 +46,11 @@ void GameActorImage::render(GameActorInstance* gameActorInstance, Renderer2D* re
 	}
 	renderer->setBlendMode(blendMode());
 
-	Texture* texture = gameActorInstance->gameActor()->m_Textures[textureIndex()];
-	//GraphicsBuffer* vertexBuffer = gameActorInstance->gameActor()->m_VertexBuffer;
-	//GraphicsBuffer* skinnedVertexBuffer = gameActorInstance->gameActor()->m_SkinnedVertexBuffer;
-	GraphicsBuffer* indexBuffer = gameActorInstance->gameActor()->m_IndexBuffer;
+	const nima::GameActor* actor = gameActorInstance->gameActor();
+	Texture* texture = actor->m_Textures[textureIndex()];
+	//GraphicsBuffer* vertexBuffer = actor->m_VertexBuffer;
+	//GraphicsBuffer* skinnedVertexBuffer = actor->m_SkinnedVertexBuffer;
+	GraphicsBuffer* indexBuffer = actor->m_IndexBuffer;
 
 	if(m_DeformVertexBuffer != nullptr && isVertexDeformDirty())
 	{
@@ -57,7 +58,7 @@ void GameActorImage::render(GameActorInstance* gameActorInstance, Renderer2D* re
 		isVertexDeformDirty(false);
 	}
 
-	GraphicsBuffer* seqUVBuffer = gameActorInstance->gameActor()->m_SequenceUVBuffer;
+	GraphicsBuffer* seqUVBuffer = actor->m_SequenceUVBuffer;
 	int uvOffset = 0;
 	if(seqUVBuffer != nullptr)
 	{
@@ -70,7 +71,7 @@ void GameActorImage::render(GameActorInstance* gameActorInstance, Renderer2D* re
 	}
 
 	renderer->prep(texture, WhiteColor, renderOpacity(), worldTransform(), m_VertexBuffer, boneInfluenceMatrices(), boneInfluenceMatricesLength(), m_DeformVertexBuffer, seqUVBuffer, uvOffset);
-	renderer->draw(indexBuffer, triangleCount()*3);
+	renderer->draw(indexBuffer, triangleCount()*3, m_IndexOffset);
 
 /* 
 	if(connectedBoneCount() > 0)

@@ -32,6 +32,8 @@ GLRenderer2D::GLRenderer2D() :
 	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &m_MaxAttributes);
 	m_WantedAttributes = new unsigned char[m_MaxAttributes];
 	m_EnabledAttributes = new unsigned char[m_MaxAttributes];
+	std::memset(m_WantedAttributes, 0, m_MaxAttributes);
+	std::memset(m_EnabledAttributes, 0, m_MaxAttributes);
 	
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	glDisable(GL_DEPTH_TEST);
@@ -67,6 +69,12 @@ GLRenderer2D::GLRenderer2D() :
 		GLShaderUniform("Color"),
 		GLShaderUniform("BoneMatrices")
 	});
+}
+
+GLRenderer2D::~GLRenderer2D()
+{
+	delete [] m_WantedAttributes;
+	delete [] m_EnabledAttributes;
 }
 
 BlendMode GLRenderer2D::blendMode() const
@@ -327,7 +335,7 @@ void GLRenderer2D::prep(Texture* texture, const Color &color, float opacity, con
 		{
 			if(m_WantedAttributes[i] != m_EnabledAttributes[i])
 			{
-				disableAttribute(i);
+				glDisableVertexAttribArray(i);
 				m_EnabledAttributes[i] = 0;
 			}
 			m_WantedAttributes[i] = 0;
@@ -375,17 +383,17 @@ void GLRenderer2D::prep(Texture* texture, const Color &color, float opacity, con
 
 }
 
-void GLRenderer2D::draw(const GraphicsBuffer *indexBuffer, int indexCount)
+void GLRenderer2D::draw(const GraphicsBuffer *indexBuffer, int indexCount, int offset)
 {
 	const GLIndexBuffer* glIndexBuffer = reinterpret_cast<const GLIndexBuffer *>(indexBuffer);
 	GLint boundBufferId = 0;
 	glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &boundBufferId);
 
-	if(boundBufferId != glIndexBuffer->id())
+	//if(boundBufferId != glIndexBuffer->id())
 	{
 		glIndexBuffer->bind();
 	}
-	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, 0);
+	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, BUFFER_OFFSET(sizeof(unsigned short)*offset));
 }
 
 void GLRenderer2D::enableAttribute(int index)

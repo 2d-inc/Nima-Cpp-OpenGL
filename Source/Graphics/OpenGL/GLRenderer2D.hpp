@@ -43,6 +43,7 @@ namespace nima
 			
 		  public:
 			GLRenderer2D();
+			~GLRenderer2D();
 
 			BlendMode blendMode() const override;
 			void setBlendMode(BlendMode mode) override;
@@ -55,7 +56,7 @@ namespace nima
 			GraphicsBuffer* makeIndexBuffer() override;
 
 			void prep(Texture *texture, const Color &color, float opacity, const Mat2D &transform, GraphicsBuffer *vertexBuffer, const float *boneMatrices, int boneMatricesLength, GraphicsBuffer *deformBuffer, GraphicsBuffer *sequenceUVBuffer, int UVoffset) override;
-			void draw(const GraphicsBuffer *indexBuffer, int indexCount) override;
+			void draw(const GraphicsBuffer *indexBuffer, int indexCount, int offset) override;
 	};
 }
 
