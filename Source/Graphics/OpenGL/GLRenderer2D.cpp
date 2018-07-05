@@ -389,7 +389,7 @@ void GLRenderer2D::draw(const GraphicsBuffer *indexBuffer, int indexCount, int o
 	GLint boundBufferId = 0;
 	glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &boundBufferId);
 
-	//if(boundBufferId != glIndexBuffer->id())
+	if(boundBufferId != glIndexBuffer->id())
 	{
 		glIndexBuffer->bind();
 	}
