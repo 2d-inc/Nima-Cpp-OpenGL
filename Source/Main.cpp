@@ -126,7 +126,7 @@ int main(int argc, char** argv)
 
 	try
 	{
-		actor->load("Assets/Archer.nima");
+		actor->load("Assets/Archer Work.nima");
 	}
 	catch (nima::OverflowException ex)
 	{
@@ -142,7 +142,7 @@ int main(int argc, char** argv)
 	nima::GameActorInstance* actorInstance = actor->instance<nima::GameActorInstance>();
 	actorInstance->initializeGraphics(renderer);
 
-	nima::ActorAnimation* animation = actorInstance->animation("Untitled");
+	nima::ActorAnimation* animation = nullptr;//actorInstance->animation("Untitled");
 	float animationTime = 0.0f;
 	characterController = actorInstance->addController<ArcherController>();
 
