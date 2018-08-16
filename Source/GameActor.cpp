@@ -40,16 +40,17 @@ static Color WhiteColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 void GameActorImage::render(GameActorInstance* gameActorInstance, Renderer2D* renderer)
 {
-	if(textureIndex() < 0 || renderOpacity() <= 0.0f)
+	if(textureIndex() < 0 || renderOpacity() <= 0.0f || renderCollapsed())
 	{
 		return;
 	}
 	renderer->setBlendMode(blendMode());
 
-	Texture* texture = gameActorInstance->gameActor()->m_Textures[textureIndex()];
-	//GraphicsBuffer* vertexBuffer = gameActorInstance->gameActor()->m_VertexBuffer;
-	//GraphicsBuffer* skinnedVertexBuffer = gameActorInstance->gameActor()->m_SkinnedVertexBuffer;
-	GraphicsBuffer* indexBuffer = gameActorInstance->gameActor()->m_IndexBuffer;
+	const nima::GameActor* actor = gameActorInstance->gameActor();
+	Texture* texture = actor->m_Textures[textureIndex()];
+	//GraphicsBuffer* vertexBuffer = actor->m_VertexBuffer;
+	//GraphicsBuffer* skinnedVertexBuffer = actor->m_SkinnedVertexBuffer;
+	GraphicsBuffer* indexBuffer = actor->m_IndexBuffer;
 
 	if(m_DeformVertexBuffer != nullptr && isVertexDeformDirty())
 	{
@@ -57,7 +58,22 @@ void GameActorImage::render(GameActorInstance* gameActorInstance, Renderer2D* re
 		isVertexDeformDirty(false);
 	}
 
+	GraphicsBuffer* seqUVBuffer = actor->m_SequenceUVBuffer;
+	int uvOffset = 0;
+	if(seqUVBuffer != nullptr)
+	{
+		int frame = sequenceFrame();
+		if(frame < 0)
+		{
+			frame += sequenceFramesCount();
+		}
+		uvOffset = sequenceFrames()[frame].m_Offset;
+	}
 
+	renderer->prep(texture, WhiteColor, renderOpacity(), worldTransform(), m_VertexBuffer, boneInfluenceMatrices(), boneInfluenceMatricesLength(), m_DeformVertexBuffer, seqUVBuffer, uvOffset);
+	renderer->draw(indexBuffer, triangleCount()*3, m_IndexOffset);
+
+/* 
 	if(connectedBoneCount() > 0)
 	{
 		if(m_DeformVertexBuffer != nullptr)
@@ -80,13 +96,15 @@ void GameActorImage::render(GameActorInstance* gameActorInstance, Renderer2D* re
 			renderer->drawTextured(worldTransform(), m_VertexBuffer, indexBuffer, m_IndexOffset, triangleCount()*3, renderOpacity(), WhiteColor, texture);
 		}
 	}
+ */
 }
 
 GameActor::GameActor() :
 	m_Textures(nullptr),
 	m_VertexBuffer(nullptr),
 	m_SkinnedVertexBuffer(nullptr),
-	m_IndexBuffer(nullptr)
+	m_IndexBuffer(nullptr),
+	m_SequenceUVBuffer(nullptr)
 {
 
 }
@@ -129,11 +147,13 @@ void GameActor::dispose()
 	delete m_VertexBuffer;
 	delete m_SkinnedVertexBuffer;
 	delete m_IndexBuffer;
+	delete m_SequenceUVBuffer;
 
 	m_Textures = nullptr;
 	m_VertexBuffer = nullptr;
 	m_SkinnedVertexBuffer = nullptr;
 	m_IndexBuffer = nullptr;
+	m_SequenceUVBuffer = nullptr;
 }
 
 ActorImage* GameActor::makeImageNode()
@@ -183,6 +203,7 @@ void GameActor::initializeGraphics(Renderer2D* renderer)
 	std::vector<float> vertexData;
 	std::vector<float> skinnedVertexData;
 	std::vector<unsigned short> indexData;
+	std::vector<float> uvData;
 
 	for(int i = 0; i < m_RenderNodeCount; i++)
 	{
@@ -233,6 +254,16 @@ void GameActor::initializeGraphics(Renderer2D* renderer)
 					{
 						indexData.push_back(tris[j]+firstVertexIndex);
 					}
+
+					float* seqUVs = actorImage->sequenceUVs();
+					if(seqUVs != nullptr)
+					{
+						int uvsCount = actorImage->vertexCount() * actorImage->sequenceFramesCount() * 2;
+						for(int j = 0; j < uvsCount; j++)
+						{
+							uvData.push_back(seqUVs[j]);
+						}
+					}
 				}
 				break;
 			}
@@ -259,6 +290,11 @@ void GameActor::initializeGraphics(Renderer2D* renderer)
 	{
 		m_IndexBuffer = renderer->makeIndexBuffer();
 		m_IndexBuffer->setData(indexData.data(), sizeof(unsigned short) * indexData.size(), BufferHint::Static);
+	}
+	if(uvData.size() > 0)
+	{
+		m_SequenceUVBuffer = renderer->makeVertexBuffer();
+		m_SequenceUVBuffer->setData(uvData.data(), sizeof(float)*uvData.size(), BufferHint::Static);
 	}
 
 	// Update the vertex buffers being referenced.

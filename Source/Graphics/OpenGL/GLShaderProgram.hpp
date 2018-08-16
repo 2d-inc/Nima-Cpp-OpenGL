@@ -20,9 +20,6 @@ namespace nima
 			GLShaderAttribute* m_Attributes;
 			int m_AttributeCount;
 
-			GLShaderAttribute* m_SecondaryAttributes;
-			int m_SecondaryAttributeCount;
-
 			int* m_Uniforms;
 			int m_UniformCount;
 
@@ -35,11 +32,10 @@ namespace nima
 
 			bool load(GLShaderResources& shaderResources, const std::string& vsFilename, const std::string& fsFilename, std::vector<GLShaderAttribute> attributes, std::vector<GLShaderUniform> uniforms);
 			bool load(GLShaderResources& shaderResources, const std::string& vsFilename, const std::string& fsFilename, std::vector<GLShaderAttribute> attributes, std::vector<GLShaderAttribute> secondaryAttributes, std::vector<GLShaderUniform> uniforms);
-			void bind(const GLVertexBuffer* vertexBuffer) const;
-			void bind(const GLVertexBuffer* vertexBuffer, const GLVertexBuffer* secondaryVertexBuffer) const;
-			void unbind() const;
+			void use();			
 
-			int uniform(int idx) const { return m_Uniforms[idx]; }
+			int uniform(int index) { return m_Uniforms[index]; }
+			GLShaderAttribute attribute(int index) { return m_Attributes[index]; }
 	};
 }
 

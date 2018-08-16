@@ -2,7 +2,6 @@
 #define _NIMA_GLRENDERER2D_HPP_
 
 #include "../Renderer2D.hpp"
-#include "GLRenderer.hpp"
 #include "GLShaderProgram.hpp"
 
 namespace nima
@@ -13,7 +12,7 @@ namespace nima
 	class GLVertexBuffer;
 	class GraphicsBuffer;
 
-	class GLRenderer2D : public GLRenderer, public Renderer2D
+	class GLRenderer2D : public Renderer2D
 	{
 		private:
 			BlendMode m_BlendMode;
@@ -22,29 +21,42 @@ namespace nima
 			float m_ProjectionMatrix[16];
 			float m_ViewMatrix[16];
 			float m_TransformMatrix[16];
+			bool m_ViewDirty;
+			Color m_Color;
+			int m_MaxAttributes;
+			unsigned char* m_EnabledAttributes;
+			unsigned char* m_WantedAttributes;
+			GLShaderResources m_Shaders;
 
-			GLShaderProgram m_TexturedShader;
-			GLShaderProgram m_DeformedTexturedShader;
-			GLShaderProgram m_TexturedSkinShader;
-			GLShaderProgram m_DeformedTexturedSkinShader;
+			Texture* m_LastTexture;
+			GraphicsBuffer* m_LastBaseBuffer;
+			GraphicsBuffer* m_LastPositionBuffer;
+			GraphicsBuffer* m_LastUVBuffer;
+			int m_LastUVOffset;
+			GLShaderProgram* m_LastShader;
 
-		public:
+			GLShaderProgram m_RegularShader;
+			GLShaderProgram m_DeformingShader;
+
+			void enableAttribute(int index);
+			void disableAttribute(int index);
+			
+		  public:
 			GLRenderer2D();
+			~GLRenderer2D();
 
 			BlendMode blendMode() const override;
 			void setBlendMode(BlendMode mode) override;
 			void setViewportSize(int width, int height) override;
 			void clear() override;
 			void setView(const Mat2D& view) override;
-			void drawTextured(const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture) override;
-			void drawTexturedAndDeformed(const Mat2D& transform, const GraphicsBuffer* deformBuffer, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture) override;
-			void drawTexturedSkin(const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float* boneMatrices, int boneMatricesLength, float opacity, const Color& color, const Texture* texture) override;
-			void drawTexturedAndDeformedSkin(const Mat2D& transform, const GraphicsBuffer* deformBuffer, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float* boneMatrices, int boneMatricesLength, float opacity, const Color& color, const Texture* texture) override;
 			Texture* makeTexture(const Bitmap* bitmap, int flags) override;
 			Texture* makeTexture(const std::string& filename, int flags) override;
 			GraphicsBuffer* makeVertexBuffer() override;
 			GraphicsBuffer* makeIndexBuffer() override;
 
+			void prep(Texture *texture, const Color &color, float opacity, const Mat2D &transform, GraphicsBuffer *vertexBuffer, const float *boneMatrices, int boneMatricesLength, GraphicsBuffer *deformBuffer, GraphicsBuffer *sequenceUVBuffer, int UVoffset) override;
+			void draw(const GraphicsBuffer *indexBuffer, int indexCount, int offset) override;
 	};
 }
 

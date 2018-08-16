@@ -59,6 +59,7 @@ void ArcherController::onAdded(nima::GameActorInstance* actorInstance)
 			{
 				float position = i / (float)(AimSliceCount-1) * m_Aim->duration();
 				m_Aim->apply(position, actorInstance, 1.0f);
+				actorInstance->update();
 				auto worldTransform = muzzle->worldTransform();
 				AimSlice& slice = m_AimLookup[i];
 
@@ -76,6 +77,7 @@ void ArcherController::onAdded(nima::GameActorInstance* actorInstance)
 				{
 					float position = i / (float)(AimSliceCount-1) * m_Aim->duration();
 					m_Aim->apply(position, actorInstance, 1.0f);
+					actorInstance->update();
 					auto worldTransform = muzzle->worldTransform();
 					AimSlice& slice = m_AimWalkingLookup[i];
 
@@ -232,7 +234,6 @@ void ArcherController::advance(nima::GameActorInstance* actorInstance, float ela
 		nima::Vec2D actorTarget;
 		nima::Mat2D::invert(inverseToActor, root->worldTransform());
 		nima::Vec2D::transform(actorTarget, m_WorldTarget, inverseToActor);
-        
 
 		// See where the target is relative to the tip of the weapon
 		float maxDot = -1.0f;

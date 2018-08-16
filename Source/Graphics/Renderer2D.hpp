@@ -22,10 +22,9 @@ namespace nima
 			virtual void setViewportSize(int width, int height) = 0;
 			virtual void clear() = 0;
 			virtual void setView(const Mat2D& view) = 0;
-			virtual void drawTextured(const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture) = 0;
-			virtual void drawTexturedAndDeformed(const Mat2D& transform, const GraphicsBuffer* deformBuffer, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float opacity, const Color& color, const Texture* texture) = 0;
-			virtual void drawTexturedSkin(const Mat2D& transform, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float* boneMatrices, int boneMatricesLength, float opacity, const Color& color, const Texture* texture) = 0;
-			virtual void drawTexturedAndDeformedSkin(const Mat2D& transform, const GraphicsBuffer* deformBuffer, const GraphicsBuffer* vertexBuffer, const GraphicsBuffer* indexBuffer, int offset, int indexCount, float* boneMatrices, int boneMatricesLength, float opacity, const Color& color, const Texture* texture) = 0;
+			virtual void prep(Texture *texture, const Color &color, float opacity, const Mat2D &transform, GraphicsBuffer *vertexBuffer, const float *boneMatrices, int boneMatricesLength,GraphicsBuffer *deformBuffer, GraphicsBuffer *sequenceUVBuffer, int UVoffset) = 0;
+			virtual void draw(const GraphicsBuffer *indexBuffer, int indexCount, int offset) = 0;
+
 			virtual Texture* makeTexture(const Bitmap* bitmap, int flags) = 0;
 			virtual Texture* makeTexture(const std::string& filename, int flags) = 0;
 			virtual GraphicsBuffer* makeVertexBuffer() = 0;
