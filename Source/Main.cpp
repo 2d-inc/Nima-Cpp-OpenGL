@@ -126,7 +126,8 @@ int main(int argc, char** argv)
 
 	try
 	{
-		actor->load("Assets/Archer Work.nima");
+		//actor->load("Assets/Archer Work.nima");
+		actor->load("Assets/Jelly Bow.nima");
 	}
 	catch (nima::OverflowException ex)
 	{
@@ -142,9 +143,9 @@ int main(int argc, char** argv)
 	nima::GameActorInstance* actorInstance = actor->instance<nima::GameActorInstance>();
 	actorInstance->initializeGraphics(renderer);
 
-	nima::ActorAnimation* animation = nullptr;//actorInstance->animation("Untitled");
+	nima::ActorAnimation* animation = actorInstance->animation("Untitled");
 	float animationTime = 0.0f;
-	characterController = actorInstance->addController<ArcherController>();
+	//characterController = actorInstance->addController<ArcherController>();
 
 	int width = 0, height = 0;
 	int lastScreenWidth = width, lastScreenHeight = height;
