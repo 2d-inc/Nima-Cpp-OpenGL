@@ -8,6 +8,7 @@
 #endif
 #define GLFW_INCLUDE_GLEXT
 #include <GLFW/glfw3.h>
+#include <cstring>
 
 #define BUFFER_OFFSET(i) ((void*)(i))
 
